@@ -4,6 +4,7 @@
  */
 
 #include "CoordMatrix.h"
+#include <device_functions.h>
 
 void cmInit( CoordMatrix* m, int rows, int cols, size_t length )
 {
@@ -38,13 +39,37 @@ void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
 
 __global__ void cmAxpy( float* b, CoordMatrix const* a, float const* x, float const* y )
 {
+   // Assume blocks and grids are all 1D
+   
    // Find out total number of threads N.
+   int nthreads = blockDim.x*gridDim.x;
    // Find out thread index 0 <= ti < N.
+   int ti = blockIdx.x*blockDim.x + threadIdx.x;
    
-   // Foreach i,j,k in ijk[ nnz/N*ti .. nnz/N*(ti+1)-1 ]
-   //    atomicAdd( b+i, k*x[j] )
+   // The end of the a->i array.
+   int const* aiend = a->i + a->nnz;
+   // The end of y.
+   float const* yend = y + a->rows;
    
-   // if( N > a->rows )
-   //    if( ti < N )
-   //       b[ti] += y[ti]
+   int const* ai   = a->i + ti;
+   int const* aj   = a->j + ti;
+   float const* ak = a->k + ti;
+   
+   // Matrix multiplication.
+   while( ai < aiend )
+   {
+      // ===COMPLEXITY===
+      // Dereferences: 4
+      // Int Adds:     4
+      // Float Mults:  1
+      // Float Adds:   1
+      atomicAdd( b+*ai, (*ak)*x[*aj] );
+      ai += nthreads;
+      aj += nthreads;
+      ak += nthreads;
+   }
+   
+   // Add y to b.
+   for( y += ti, b += ti; y < yend; y+=nthreads )
+      *b += *y;
 }

@@ -23,7 +23,14 @@ OPTION( DO_PROFILING
 #==============Custom Cmake Modules=============
 SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules" )
 
+#===================Find Shit================
+FIND_PACKAGE(CUDA REQUIRED)
+
 #===========Set release/debug settings==========
+IF( NOT CUDA_NVCC_FLAGS )
+   SET( CUDA_NVCC_FLAGS "-arch sm_20" )
+ENDIF()
+
 IF( CMAKE_COMPILER_IS_GNUCXX )
    SET( CMAKE_CXX_FLAGS_DEBUG "-g3 -Wall -Wno-sign-compare" )
    SET( LINK_FLAGS_DEBUG "-rdynamic" )
@@ -42,8 +49,5 @@ ELSE()
    # This definition disables the assert() macro.
    ADD_DEFINITIONS( -DNDEBUG )
 ENDIF()
-
-#===================Find Shit================
-FIND_PACKAGE(CUDA REQUIRED)
 
 ADD_SUBDIRECTORY( "gpulib/" )

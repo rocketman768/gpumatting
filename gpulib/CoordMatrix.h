@@ -32,6 +32,6 @@ void cmRelease( CoordMatrix* m );
 //! \brief Append elements to the matrix. Duplicate (\c i,\c j) will add.
 void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length );
 
-//! \brief Compute \c b = \c a \c x + \c y.
+//! \brief Compute \c b += \c a \c x + \c y.
 __global__ void cmAxpy( float* b, CoordMatrix const* a, float const* x, float const* y );
 #endif /*COORDMATRIX_H*/
