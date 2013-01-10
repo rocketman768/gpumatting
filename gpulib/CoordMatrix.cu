@@ -30,8 +30,21 @@ void cmRelease( CoordMatrix* m )
 
 void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
 {
-   cudaMemcpy(m->i, i, length*sizeof(int));
-   cudaMemcpy(m->j, j, length*sizeof(int));
-   cudaMemcpy(m->k, k, length*sizeof(float));
+   cudaMemcpy(m->i, i, length*sizeof(int), cudaMemcpyHostToHost );
+   cudaMemcpy(m->j, j, length*sizeof(int), cudaMemcpyHostToHost );
+   cudaMemcpy(m->k, k, length*sizeof(float), cudaMemcpyHostToHost );
    m->nnz += length;
+}
+
+__global__ void cmAxpy( float* b, CoordMatrix const* a, float const* x, float const* y )
+{
+   // Find out total number of threads N.
+   // Find out thread index 0 <= ti < N.
+   
+   // Foreach i,j,k in ijk[ nnz/N*ti .. nnz/N*(ti+1)-1 ]
+   //    atomicAdd( b+i, k*x[j] )
+   
+   // if( N > a->rows )
+   //    if( ti < N )
+   //       b[ti] += y[ti]
 }
