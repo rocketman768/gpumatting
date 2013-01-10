@@ -27,3 +27,11 @@ void cmRelease( CoordMatrix* m )
    m->nnz = 0;
    m->length = 0;
 }
+
+void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
+{
+   cudaMemcpy(m->i, i, length*sizeof(int));
+   cudaMemcpy(m->j, j, length*sizeof(int));
+   cudaMemcpy(m->k, k, length*sizeof(float));
+   m->nnz += length;
+}

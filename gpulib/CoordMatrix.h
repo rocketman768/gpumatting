@@ -29,4 +29,7 @@ void cmInit( CoordMatrix* m, int rows, int cols, size_t length );
 //! \brief Release all memory for \c m.
 void cmRelease( CoordMatrix* m );
 
+//! \brief Append elements to the matrix. Duplicate (\c i,\c j) will add.
+void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length );
+
 #endif /*COORDMATRIX_H*/
