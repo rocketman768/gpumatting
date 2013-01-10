@@ -43,3 +43,7 @@ ELSE()
    ADD_DEFINITIONS( -DNDEBUG )
 ENDIF()
 
+#===================Find Shit================
+FIND_PACKAGE(CUDA REQUIRED)
+
+ADD_SUBDIRECTORY( "gpulib/" )
