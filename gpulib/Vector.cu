@@ -18,9 +18,10 @@ __global__ void innerProd( float* result, float const* x, float const* y, int le
    
    for( ; i < len; i += nthreads )
       *mysdata += x[i]*y[i];
-   
-   if( i == 0 )
-      *result = 0.f;
+  
+   // Doesn't work for some reason? 
+   //if( i == 0 )
+   //   *result = 0.f;
    
    // Wait for all the shared data to be fully populated.
    __syncthreads();
