@@ -8,10 +8,12 @@ INCLUDE(FindCUDA)
 # Make a list of the cpp files called SRC_FILES
 SET( SRC_FILES
    "CoordMatrix.cu"
+   "Vector.cu"
 )
 
 SET( H_FILES
    "CoordMatrix.h"
+   "Vector.h"
 )
 
 # Adds a library that depends on the source files.
@@ -22,3 +24,5 @@ CUDA_ADD_LIBRARY( gpulib SHARED ${SRC_FILES} )
 #   gpulib
 #   someotherlib
 #)
+
+ADD_SUBDIRECTORY( "tests/" )

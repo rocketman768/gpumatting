@@ -6,7 +6,7 @@
 #include "CoordMatrix.h"
 #include <device_functions.h>
 
-void cmInit( CoordMatrix* m, int rows, int cols, size_t length )
+void cooInit( CoordMatrix* m, int rows, int cols, size_t length )
 {
    m->rows = rows;
    m->cols = cols;
@@ -18,7 +18,7 @@ void cmInit( CoordMatrix* m, int rows, int cols, size_t length )
    cudaMalloc( &(m->k), length );
 }
 
-void cmRelease( CoordMatrix* m )
+void cooRelease( CoordMatrix* m )
 {
    cudaFree( m->i );
    cudaFree( m->j );
@@ -29,7 +29,7 @@ void cmRelease( CoordMatrix* m )
    m->length = 0;
 }
 
-void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
+void cooAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
 {
    cudaMemcpy(m->i, i, length*sizeof(int), cudaMemcpyHostToHost );
    cudaMemcpy(m->j, j, length*sizeof(int), cudaMemcpyHostToHost );
@@ -37,7 +37,7 @@ void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length )
    m->nnz += length;
 }
 
-__global__ void cmAxpy( float* b, CoordMatrix const* a, float const* x, float const* y )
+__global__ void cooAxpy( float* b, CoordMatrix const* a, float const* x, float const* y )
 {
    // Assume blocks and grids are all 1D
    

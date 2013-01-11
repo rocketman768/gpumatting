@@ -6,7 +6,7 @@ SET( SOURCE_ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} )
 SET( doc_DIR "doc/" )
 SET( test_DIR "tests/" )
 
-#SET( EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin" )
+SET( EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}/bin" )
 SET( LIBRARY_OUTPUT_PATH "${PROJECT_BINARY_DIR}/lib" )
 
 #=================Options=======================

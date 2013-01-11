@@ -24,14 +24,14 @@ typedef struct{
 } CoordMatrix;
 
 //! \brief Initialize a CoordMatrix with space for \c length nonzeros.
-void cmInit( CoordMatrix* m, int rows, int cols, size_t length );
+void cooInit( CoordMatrix* m, int rows, int cols, size_t length );
 
 //! \brief Release all memory for \c m.
-void cmRelease( CoordMatrix* m );
+void cooRelease( CoordMatrix* m );
 
 //! \brief Append elements to the matrix. Duplicate (\c i,\c j) will add.
-void cmAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length );
+void cooAppend( CoordMatrix* m, int* i, int* j, int* k, size_t length );
 
 //! \brief Compute \c b += \c a \c x + \c y.
-__global__ void cmAxpy( float* b, CoordMatrix const* a, float const* x, float const* y );
+__global__ void cooAxpy( float* b, CoordMatrix const* a, float const* x, float const* y );
 #endif /*COORDMATRIX_H*/
