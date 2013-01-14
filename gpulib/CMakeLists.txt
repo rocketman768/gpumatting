@@ -7,11 +7,13 @@ INCLUDE(FindCUDA)
 
 # Make a list of the cpp files called SRC_FILES
 SET( SRC_FILES
+   "CompressedMatrix.cu"
    "CoordMatrix.cu"
    "Vector.cu"
 )
 
 SET( H_FILES
+   "CompressedMatrix.h"
    "CoordMatrix.h"
    "Vector.h"
 )
