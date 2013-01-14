@@ -18,7 +18,6 @@ void csmInit( CompressedMatrix* m, int rows, int cols, size_t length )
    cudaMemset( m->p, 0x00, (rows+1)*sizeof(int));
 }
 
-
 // Thread i is responsible in each iteration for b[i + nthreads*iteration].
 // sdata[ti] is used in each block to store partial result for b[i + nthreads*iteration].
 __global__ void csmAxpy( float* b, CompressedMatrix const* a, float const* x, float const* y )
