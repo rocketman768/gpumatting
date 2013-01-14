@@ -38,26 +38,37 @@ __global__ void csmAxpy( float* b, CompressedMatrix const* a, float const* x, fl
    float const* ak;
    float const* akend;
    
-   while(b < bend)
+   while(true)
    {
-      ak = a->k + *ap;
-      aj = a->j + *ap;
-      akend = a->k + *(ap+1);
-      
-      *mysdata = 0.0f;
-      while( ak < akend )
+      if( b < bend )
       {
-         *mysdata += *ak * x[*aj];
-         ++ak;
-         ++aj;
+         ak = a->k + *ap;
+         aj = a->j + *ap;
+         akend = a->k + *(ap+1);
+         
+         *mysdata = 0.0f;
+         while( ak < akend )
+         {
+            *mysdata += *ak * x[*aj];
+            ++ak;
+            ++aj;
+         }
+         
+         // Wait so that sdata is fully populated.
+         __syncthreads();
+         // Since all threads sync'd, this should result in sequential access.
+         *b = *mysdata + *y;
+      }
+      else
+      {
+         // These threads have fallen off the end, so just have them sit.
+         __syncthreads();
       }
       
-      // Wait so that sdata is fully populated.
-      // NOTE: will this cause problems since some threads may terminate at the
-      // while() condition above?
-      __syncthreads();
-      // Since all threads sync'd, this should result in sequential access.
-      *b = *mysdata + *y;
+      // If any thread has fallen off, they will all fall off next iteration,
+      // so end it now!
+      if( __any( b >= bend ) )
+         break;
       
       b += nthreads;
       y += nthreads;
