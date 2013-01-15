@@ -43,7 +43,12 @@ int main()
       }
    }
    p[i] = nnz;
-   
+  
+   printf("i\tk\tj\tp\n");
+   for( i = 0; i < 20; ++i )
+      printf("%d %.2e %d %d\n", i, k[i], j[i], p[i]);
+   printf( "p[N-1]: %d\np[N]: %d\n", p[N-1], p[N] );
+
    // Tell GPU what to do.
    cudaMalloc( (void**)&dx, N*sizeof(float) );
    cudaMalloc( (void**)&dy, N*sizeof(float) );
@@ -62,7 +67,7 @@ int main()
    
    // Copy the matrix over.
    csmInit<<<1,1>>>( da, N, N, dp, dj, dk, nnz);
-  
+
    // Do the damn multiplication already.
    csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
    

@@ -59,13 +59,16 @@ __global__ void csmAxpy( float* b, CompressedMatrix const* a, float const* x, fl
          akend = a->k + *(ap+1);
          
          *mysdata = 0.0f;
+         // This loop is causing trouble.
+         /*
          while( ak < akend )
          {
             *mysdata += *ak * x[*aj];
             ++ak;
             ++aj;
          }
-         
+         */
+ 
          // Wait so that sdata is fully populated.
          __syncthreads();
          // Since all threads sync'd, this should result in sequential access.
