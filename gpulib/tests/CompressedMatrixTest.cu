@@ -54,7 +54,6 @@ int main()
    cudaMalloc( (void**)&dj, 9*N*sizeof(int) );
    cudaMalloc( (void**)&dp, (N+1)*sizeof(int) );
    
-   /* 
    cudaMemcpyAsync( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpyAsync( (void*)dy, (void*)hy, N*sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpyAsync( (void*)dk, (void*)k, 9*N*sizeof(float), cudaMemcpyHostToDevice );
@@ -63,21 +62,20 @@ int main()
    
    // Copy the matrix over.
    csmInit<<<1,1>>>( da, N, N, dp, dj, dk, nnz);
-   
+  
    // Do the damn multiplication already.
-   //csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
+   csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
    
    // Copy result vector back.
    cudaMemcpyAsync( (void*)hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
-   */
  
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
 
    // Free device pointers.
-   cudaFree( da->p );
-   cudaFree( da->j );
-   cudaFree( da->k );
+   cudaFree( dp );
+   cudaFree( dj );
+   cudaFree( dk );
    cudaFree( da );
    cudaFree( db );
    cudaFree( dy );
