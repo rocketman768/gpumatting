@@ -9,7 +9,8 @@ int main()
    int nBlocks = 16;
    int nThreadsPerBlock = 1024;
    
-   int i,col,kk;
+   int i,col;
+   int nnz;
    float* hx = (float*)malloc( N * sizeof(float) );
    float* hy = (float*)malloc( N * sizeof(float) );
    float* dx;
@@ -26,24 +27,22 @@ int main()
    }
 
    // Make the matrix.
-   CompressedMatrix* ha = (CompressedMatrix*)malloc(sizeof(CompressedMatrix));
-   ha->length = 9*N;
-   ha->rows = N;
-   ha->cols = N;
    float* k = (float*)malloc( 9*N*sizeof(float) );
    int* j = (int*)malloc( 9*N*sizeof(int) );
    int* p = (int*)malloc( (N+1)*sizeof(int) );
-   for( i = 0, kk=0; i < N; ++i )
+   float* dk;
+   int* dj;
+   int* dp;
+   for( i = 0, nnz=0; i < N; ++i )
    {
-      p[i] = kk;
-      for( col = i; col < N && col-i < 9; ++col, ++kk )
+      p[i] = nnz;
+      for( col = i; col < N && col-i < 9; ++col, ++nnz )
       {
-         k[kk] = (float)kk;
-         j[kk] = col;
+         k[nnz] = (float)nnz;
+         j[nnz] = col;
       }
    }
-   p[i] = kk;
-   ha->nnz = kk;
+   p[i] = nnz;
    
    // Tell GPU what to do.
    cudaMalloc( (void**)&dx, N*sizeof(float) );
@@ -51,19 +50,19 @@ int main()
    cudaMalloc( (void**)&db, N*sizeof(float) );
   
    cudaMalloc( (void**)&da, sizeof(CompressedMatrix) );
-   cudaMalloc( (void**)&(da->k), 9*N*sizeof(float) );
-   cudaMalloc( (void**)&(da->j), 9*N*sizeof(int) );
-   cudaMalloc( (void**)&(da->p), (N+1)*sizeof(int) );
+   cudaMalloc( (void**)&dk, 9*N*sizeof(float) );
+   cudaMalloc( (void**)&dj, 9*N*sizeof(int) );
+   cudaMalloc( (void**)&dp, (N+1)*sizeof(int) );
    
    /* 
    cudaMemcpyAsync( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpyAsync( (void*)dy, (void*)hy, N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpyAsync( (void*)dk, (void*)k, 9*N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpyAsync( (void*)dj, (void*)j, 9*N*sizeof(int), cudaMemcpyHostToDevice );
+   cudaMemcpyAsync( (void*)dp, (void*)p, (N+1)*sizeof(int), cudaMemcpyHostToDevice );
    
    // Copy the matrix over.
-   cudaMemcpyAsync( (void*)da, (void*)ha, sizeof(CompressedMatrix), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)(da->k), (void*)k, 9*N*sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)(da->j), (void*)j, 9*N*sizeof(int), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)(da->p), (void*)p, (N+1)*sizeof(float), cudaMemcpyHostToDevice );
+   csmInit<<<1,1>>>( da, N, N, dp, dj, dk, nnz);
    
    // Do the damn multiplication already.
    //csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
@@ -94,7 +93,6 @@ int main()
    free( p );
    free( j );
    free( k );
-   free( ha );
    free( hb );
    free( hy );
    free( hx );
