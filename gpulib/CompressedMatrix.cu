@@ -41,52 +41,35 @@ __global__ void csmAxpy( float* b, CompressedMatrix const* a, float const* x, fl
    int i = blockIdx.x*blockDim.x + threadIdx.x;
    
    float* mysdata = sdata+ti;
-   
-   b += i;
-   y += i;
-   float const* bend = b + a->rows;
-   int const* ap   = a->p + i;
-   int const* aj;
-   float const* ak;
-   float const* akend;
+   int row = i;
+   int numrows = a->rows;
+   int ndx, ndxEnd;
    
    while(true)
    {
-      if( b < bend )
+      if( row <= numrows )
       {
-         ak = a->k + *ap;
-         aj = a->j + *ap;
-         akend = a->k + *(ap+1);
-         
+         ndx = a->p[row];
+         ndxEnd = a->p[row+1];
          *mysdata = 0.0f;
-         // This loop is causing trouble.
-         /*
-         while( ak < akend )
+         while( ndx < ndxEnd )
          {
-            *mysdata += *ak * x[*aj];
-            ++ak;
-            ++aj;
+            *mysdata += a->k[ndx] * x[a->j[ndx]];
+            ++ndx;
          }
-         */
- 
-         // Wait so that sdata is fully populated.
-         __syncthreads();
-         // Since all threads sync'd, this should result in sequential access.
-         *b = *mysdata + *y;
-      }
-      else
-      {
-         // These threads have fallen off the end, so just have them sit.
-         __syncthreads();
       }
       
+      // Wait so that sdata is fully populated.
+      // Since all threads sync'd, this should result in sequential access.
+      __syncthreads();
+      if( row <= numrows )
+         b[row] = *mysdata + *y;
+
       // If any thread has fallen off, they will all fall off next iteration,
       // so end it now!
-      if( __any( b >= bend ) )
+      if( __any( row > numrows ) )
          break;
       
-      b += nthreads;
-      y += nthreads;
-      ap += nthreads;
+      row += nthreads;
    }
 }

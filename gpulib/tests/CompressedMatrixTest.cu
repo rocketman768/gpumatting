@@ -9,6 +9,7 @@ int main()
    int nBlocks = 16;
    int nThreadsPerBlock = 1024;
    
+   cudaError_t error;
    int i,col;
    int nnz;
    float* hx = (float*)malloc( N * sizeof(float) );
@@ -59,24 +60,28 @@ int main()
    cudaMalloc( (void**)&dj, 9*N*sizeof(int) );
    cudaMalloc( (void**)&dp, (N+1)*sizeof(int) );
    
-   cudaMemcpyAsync( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)dy, (void*)hy, N*sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)dk, (void*)k, 9*N*sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)dj, (void*)j, 9*N*sizeof(int), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)dp, (void*)p, (N+1)*sizeof(int), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dy, (void*)hy, N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dk, (void*)k, 9*N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dj, (void*)j, 9*N*sizeof(int), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dp, (void*)p, (N+1)*sizeof(int), cudaMemcpyHostToDevice );
    
    // Copy the matrix over.
    csmInit<<<1,1>>>( da, N, N, dp, dj, dk, nnz);
+   error = cudaDeviceSynchronize();
+   printf("error = %d\n", error);
 
    // Do the damn multiplication already.
    csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
+   error = cudaDeviceSynchronize();
+   printf("error = %d\n", error);
    
-   // Copy result vector back.
-   cudaMemcpyAsync( (void*)hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
- 
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
 
+   // Copy result vector back.
+   cudaMemcpy( (void*)hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
+ 
    // Free device pointers.
    cudaFree( dp );
    cudaFree( dj );
@@ -89,7 +94,7 @@ int main()
    // Print result
    printf("b=\n");
    for( i = 0; i < 10; ++i )
-      printf("%.2e\n", hb[i]);
+      printf("%.2f\n", hb[i]);
    printf("...\n");
    
    // Free host pointers.
