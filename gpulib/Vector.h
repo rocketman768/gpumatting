@@ -11,4 +11,7 @@ __global__ void innerProd( float* result, float const* x, float const* y, int le
 
 __device__ void reduceSequential();
 
+template <int blocksize>
+__device__ void reduceUnrolled();
+
 #endif /*VECTOR_H*/
