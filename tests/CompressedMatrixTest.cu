@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <cuda.h>
-#include "Vector.h"
+#include "Vector.cu"
 #include "CompressedMatrix.h"
+#include "CompressedMatrix.cu"
 
 int main()
 {
@@ -64,7 +65,7 @@ int main()
    csmInit<<<1,1>>>( da, N, N, dp, dj, dk, nnz);
    
    // Do the damn multiplication already.
-   csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
+   csmAxpy_k<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
    
    // Copy result vector back.
    cudaMemcpyAsync( (void*)hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );

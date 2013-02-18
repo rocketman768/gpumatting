@@ -7,11 +7,12 @@
 #define COMPRESSEDMATRIX_H
 
 #include <stddef.h>
+#include <cuda.h>
 
 /*!
  * \brief Coordinate-based sparse matrix.
  */
-typedef struct{
+typedef struct CompressedMatrix_s{
    int* p;
    int* j;
    float* k;
@@ -22,11 +23,5 @@ typedef struct{
    //! \brief Length of arrays i, j, k
    size_t length;
 } CompressedMatrix;
-
-void csmInit( CompressedMatrix* m, int rows, int cols, size_t length );
-
-__global__ void csmInit( CompressedMatrix* m, int rows, int cols, int* p, int* j, float* k, size_t nnz );
-
-__global__ void csmAxpy( float* b, CompressedMatrix const* a, float const* x, float const* y );
 
 #endif /*COMPRESSEDMATRIX_H*/

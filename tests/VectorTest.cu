@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <cuda.h>
-#include "Vector.h"
+#include "Vector.cu"
 
 int main()
 {
@@ -29,7 +29,7 @@ int main()
    cudaMemcpyAsync( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpyAsync( (void*)dy, (void*)hy, N*sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpyAsync( (void*)dresult, (void*)&hresult, 1*sizeof(float), cudaMemcpyHostToDevice );
-   innerProd<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(dresult, dx, dy, N);
+   innerProd_k<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(dresult, dx, dy, N);
    cudaMemcpyAsync( (void*)&hresult, (void const*)dresult, 1*sizeof(float), cudaMemcpyDeviceToHost );
    cudaFree( dresult );
    cudaFree( dy );
@@ -41,4 +41,3 @@ int main()
    printf("result: %.2e\n", hresult);
    return 0;
 }
-
