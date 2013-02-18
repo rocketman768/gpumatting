@@ -2,6 +2,9 @@
 
 __device__ void bmAx( float* b, const BandedMatrix a, float const* x )
 {
+   // This will hold the matrix data.
+   extern __shared__ float sdata[];
+   
    int nthreads = blockDim.x*gridDim.x;
    int i = blockIdx.x*blockDim.x + threadIdx.x;
    int j;
@@ -18,7 +21,7 @@ __device__ void bmAx( float* b, const BandedMatrix a, float const* x )
          for( j = 0; j < a.nbands; ++j )
          {
             //if( i+a.bands[j] >= 0 && i+a.bands[j] < a.cols )
-               bi += a.a[j+i*a.nbands] * x[i+a.bands[j]];
+               bi += a.a[i+j*a.rows] * x[i+a.bands[j]];
          }
          
          b[i] = bi;

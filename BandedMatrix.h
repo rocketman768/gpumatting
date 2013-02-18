@@ -3,8 +3,8 @@
 
 typedef struct BandedMatrix_s
 {
-   // The band data, organized in a rows x nbands dense
-   // row-major matrix format
+   // The band data, organized in a nbands x rows dense
+   // column-major matrix format
    float* a;
    // [-1,0,2] means a[0+i*nbands] is a_i(i-1),
    // a[1+i*nbands] is a_ii, and a[2+i*nbands] is a_i(i+2)

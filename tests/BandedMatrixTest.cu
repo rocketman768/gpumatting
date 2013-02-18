@@ -32,12 +32,20 @@ int main()
    
    for( i = 0; i < N; ++i )
    {
-      hx[i] = i;//1.f;
+      hx[i] = i;
+      /*
       if( i - 10 >= 0 )
          hA.a[0 + i*hA.nbands] = 1;
       hA.a[1 + i*hA.nbands] = 1;
       if( i + 10 < N )
          hA.a[2 + i*hA.nbands] = 1;
+      */
+      
+      if( i - 10 >= 0 )
+         hA.a[i + 0*hA.rows] = 1;
+      hA.a[i + 1*hA.rows] = 1;
+      if( i + 10 < N )
+         hA.a[i + 2*hA.rows] = 1;
    }
    
    dA = hA;
