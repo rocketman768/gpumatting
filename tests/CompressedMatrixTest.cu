@@ -1,7 +1,8 @@
 #include <stdio.h>
 #include <cuda.h>
-#include "Vector.h"
+#include "Vector.cu"
 #include "CompressedMatrix.h"
+#include "CompressedMatrix.cu"
 
 int main()
 {
@@ -72,9 +73,7 @@ int main()
    printf("error = %d\n", error);
 
    // Do the damn multiplication already.
-   csmAxpy<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
-   error = cudaDeviceSynchronize();
-   printf("error = %d\n", error);
+   csmAxpy_k<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
    
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();

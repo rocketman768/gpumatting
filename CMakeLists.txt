@@ -26,10 +26,16 @@ SET( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeModules" )
 #===================Find Shit================
 FIND_PACKAGE(CUDA REQUIRED)
 
-#===========Set release/debug settings==========
+SET(CUDA_SEPARABLE_COMPILATION OFF)
 IF( NOT CUDA_NVCC_FLAGS )
-   SET( CUDA_NVCC_FLAGS "-arch sm_20" )
+   SET( CUDA_NVCC_FLAGS "-arch sm_30" )
 ENDIF()
+
+#Include the FindCUDA script
+INCLUDE(FindCUDA)
+CUDA_BUILD_CLEAN_TARGET()
+
+#===========Set release/debug settings==========
 
 IF( CMAKE_COMPILER_IS_GNUCXX )
    SET( CMAKE_CXX_FLAGS_DEBUG "-g3 -Wall -Wno-sign-compare" )
@@ -50,4 +56,6 @@ ELSE()
    ADD_DEFINITIONS( -DNDEBUG )
 ENDIF()
 
-ADD_SUBDIRECTORY( "gpulib/" )
+INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
+CUDA_ADD_EXECUTABLE( matting main.cu )
+ADD_SUBDIRECTORY( "tests/" )
