@@ -56,11 +56,22 @@ int main()
    // Tell GPU what to do.
    cudaMalloc( (void**)&dx, N*sizeof(float) );
    cudaMalloc( (void**)&db, N*sizeof(float) );
-   cudaMalloc( (void**)&(dA.a),  N * hA.nbands * sizeof(float) );
+   cudaMallocPitch( (void**)&(dA.a), (size_t*)&(dA.apitch), N * sizeof(float), hA.nbands );
    cudaMalloc( (void**)&(dA.bands),  hA.nbands * sizeof(int) );
    
    cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpy( (void*)(dA.a), (void*)(hA.a), N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
+   //cudaMemcpy( (void*)(dA.a), (void*)(hA.a), N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy2D(
+      (void*)(dA.a),            // Destination
+      dA.apitch,                // Destination pitch
+      (const void*)(hA.a),      // Source
+      hA.rows * sizeof(float),  // Source pitch
+      hA.rows * sizeof(float),  // Source width
+      hA.nbands,                // Source height
+      cudaMemcpyHostToDevice
+   );
+   cudaThreadSynchronize();
+   dA.apitch >>= 2; // Want the pitch to be in 4-byte indices.
    cudaMemcpy( (void*)(dA.bands), (void*)(hA.bands), hA.nbands * sizeof(int), cudaMemcpyHostToDevice );
    
    bmAx_k<<<nBlocks, nThreadsPerBlock, sharedBytesPerBlock>>>(db, dA, dx);
@@ -74,12 +85,15 @@ int main()
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
    
+   printf("Pitch %d\n", dA.apitch);
+   
    //+++++++++++++++++++++++++++++++TEST+++++++++++++++++++++++++++++++++++++++
    bool passed = true;
    for( i = 0; i < 10; ++i )
    {
       if(fabs(hb[i] - (10.f+2*i)) > 1e-6)
       {
+         printf("b[%d]=%.5e\n", i, hb[i]);
          passed = false;
          break;
       }

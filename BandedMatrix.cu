@@ -24,22 +24,18 @@ __device__ void bmAx( float* b, const BandedMatrix a, float const* x )
       bi = 0.f;
       if( i < a.rows )
       {
-         // NOTE: sometimes i+a->bands[j] is a bad index into x[], but we
-         // guarantee that when it is a bad index, a[j+i*a->nbands] == 0.f,
+         // NOTE: sometimes i+a.bands[j] is a bad index into x[], but we
+         // guarantee that when it is a bad index, a[i+j*a->nbands] == 0.f,
          // so as long as there is no segfault, we don't have to branch here.
          for( j = 0; j < a.nbands; ++j )
-         {
-            //if( i+a.bands[j] >= 0 && i+a.bands[j] < a.cols )
-               bi += a.a[i+j*a.rows] * x[i+sdata[j]];
-         }
+            bi += a.a[i+j*a.apitch] * x[i+sdata[j]];
          
          b[i] = bi;
       }
       
-      
       if( __any(i >= a.rows) )
          break;
-      
+
       i += nthreads;
    }
 }
