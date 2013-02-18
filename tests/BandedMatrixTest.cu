@@ -32,7 +32,7 @@ int main()
    
    for( i = 0; i < N; ++i )
    {
-      hx[i] = 1.f;
+      hx[i] = i;//1.f;
       if( i - 10 >= 0 )
          hA.a[0 + i*hA.nbands] = 1;
       hA.a[1 + i*hA.nbands] = 1;
@@ -45,13 +45,15 @@ int main()
    // Tell GPU what to do.
    cudaMalloc( (void**)&dx, N*sizeof(float) );
    cudaMalloc( (void**)&db, N*sizeof(float) );
-   cudaMemcpyAsync( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMalloc( (void**)&(dA.a),  N * hA.nbands * sizeof(float) );
+   cudaMalloc( (void**)&(dA.bands),  hA.nbands * sizeof(int) );
    
-   cudaMemcpyAsync( (void*)dA.a, (void*)hA.a, N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpyAsync( (void*)dA.bands, (void*)hA.bands, hA.nbands * sizeof(int), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)(dA.a), (void*)(hA.a), N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
+   cudaMemcpy( (void*)(dA.bands), (void*)(hA.bands), hA.nbands * sizeof(int), cudaMemcpyHostToDevice );
    
    bmAx_k<<<nBlocks, nThreadsPerBlock>>>(db, dA, dx);
-   cudaMemcpyAsync( (void*)&hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
+   cudaMemcpy( (void*)hb, (void*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
    
    cudaFree( dA.a );
    cudaFree( dA.bands );
@@ -61,10 +63,44 @@ int main()
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
    
-   for( i = 0; i < 20; ++i )
-      printf("%.2e\n", hb[i]);
+   //+++++++++++++++++++++++++++++++TEST+++++++++++++++++++++++++++++++++++++++
+   bool passed = true;
+   for( i = 0; i < 10; ++i )
+   {
+      if(fabs(hb[i] - (10.f+2*i)) > 1e-6)
+      {
+         passed = false;
+         break;
+      }
+   }
+   for( i = 10; passed && i < N-10; ++i )
+   {
+      if(fabs(hb[i] - (30.0+3*(i-10))) > 1e-6)
+      {
+         printf("b[%d]=%.5e\n", i, hb[i]);
+         passed = false;
+         break;
+      }
+   }
+   for( i = N-10; passed && i < N; ++i )
+   {
+      if(fabs(hb[i] - (1999970.0+2*(i-(N-10)))) > 1e-6)
+      {
+         printf("b[%d]=%.5e\n", i, hb[i]);
+         passed = false;
+         break;
+      }
+   }
    
-   free(hx);
+   if(passed)
+      printf("Test PASSED\n");
+   else
+      printf("Test FAILED\n");
+   //--------------------------------------------------------------------------
+   
+   free(hA.bands);
+   free(hA.a);
    free(hb);
+   free(hx);
    return 0;
 }
