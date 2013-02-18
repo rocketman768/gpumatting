@@ -8,6 +8,7 @@ int main()
    int N = 1e6;
    int nBlocks = 16;
    int nThreadsPerBlock = 1024;
+   int sharedBytesPerBlock = 0;
    
    int i;
    
@@ -50,6 +51,8 @@ int main()
    
    dA = hA;
    
+   sharedBytesPerBlock = hA.nbands * sizeof(int);
+   
    // Tell GPU what to do.
    cudaMalloc( (void**)&dx, N*sizeof(float) );
    cudaMalloc( (void**)&db, N*sizeof(float) );
@@ -60,7 +63,7 @@ int main()
    cudaMemcpy( (void*)(dA.a), (void*)(hA.a), N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
    cudaMemcpy( (void*)(dA.bands), (void*)(hA.bands), hA.nbands * sizeof(int), cudaMemcpyHostToDevice );
    
-   bmAx_k<<<nBlocks, nThreadsPerBlock>>>(db, dA, dx);
+   bmAx_k<<<nBlocks, nThreadsPerBlock, sharedBytesPerBlock>>>(db, dA, dx);
    cudaMemcpy( (void*)hb, (void*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
    
    cudaFree( dA.a );
