@@ -34,13 +34,6 @@ int main()
    for( i = 0; i < N; ++i )
    {
       hx[i] = i;
-      /*
-      if( i - 10 >= 0 )
-         hA.a[0 + i*hA.nbands] = 1;
-      hA.a[1 + i*hA.nbands] = 1;
-      if( i + 10 < N )
-         hA.a[2 + i*hA.nbands] = 1;
-      */
       
       if( i - 10 >= 0 )
          hA.a[i + 0*hA.rows] = 1;
@@ -49,43 +42,26 @@ int main()
          hA.a[i + 2*hA.rows] = 1;
    }
    
-   dA = hA;
-   
    sharedBytesPerBlock = hA.nbands * sizeof(int);
    
-   // Tell GPU what to do.
+   //++++++++++++++++++++++++++Kernel Invocation+++++++++++++++++++++++++++++++
    cudaMalloc( (void**)&dx, N*sizeof(float) );
    cudaMalloc( (void**)&db, N*sizeof(float) );
-   cudaMallocPitch( (void**)&(dA.a), (size_t*)&(dA.apitch), N * sizeof(float), hA.nbands );
-   cudaMalloc( (void**)&(dA.bands),  hA.nbands * sizeof(int) );
-   
    cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
-   //cudaMemcpy( (void*)(dA.a), (void*)(hA.a), N * hA.nbands * sizeof(float), cudaMemcpyHostToDevice );
-   cudaMemcpy2D(
-      (void*)(dA.a),            // Destination
-      dA.apitch,                // Destination pitch
-      (const void*)(hA.a),      // Source
-      hA.rows * sizeof(float),  // Source pitch
-      hA.rows * sizeof(float),  // Source width
-      hA.nbands,                // Source height
-      cudaMemcpyHostToDevice
-   );
-   cudaThreadSynchronize();
-   dA.apitch >>= 2; // Want the pitch to be in 4-byte indices.
-   cudaMemcpy( (void*)(dA.bands), (void*)(hA.bands), hA.nbands * sizeof(int), cudaMemcpyHostToDevice );
    
+   copyToDevice( &dA, &hA );
+
    bmAx_k<<<nBlocks, nThreadsPerBlock, sharedBytesPerBlock>>>(db, dA, dx);
    cudaMemcpy( (void*)hb, (void*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
    
-   cudaFree( dA.a );
-   cudaFree( dA.bands );
+   deviceFree( &dA );
    cudaFree( db );
    cudaFree( dx );
    
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
+   //--------------------------------------------------------------------------
    
-   printf("Pitch %d\n", dA.apitch);
    
    //+++++++++++++++++++++++++++++++TEST+++++++++++++++++++++++++++++++++++++++
    bool passed = true;
@@ -129,3 +105,4 @@ int main()
    free(hx);
    return 0;
 }
+

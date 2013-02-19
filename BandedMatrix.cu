@@ -1,6 +1,35 @@
 #include "BandedMatrix.h"
 
 /*!
+ * \brief Copy a host matrix to a device matrix.
+ */
+void copyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
+{
+   *dA = *hA; 
+
+   cudaMallocPitch( (void**)&(dA->a), (size_t*)&(dA->apitch), hA->rows * sizeof(float), hA->nbands );
+   cudaMalloc( (void**)&(dA->bands),  hA->nbands * sizeof(int) );
+   cudaMemcpy2D(
+      (void*)(dA->a),            // Destination
+      dA->apitch,                // Destination pitch
+      (const void*)(hA->a),      // Source
+      hA->rows * sizeof(float),  // Source pitch
+      hA->rows * sizeof(float),  // Source width
+      hA->nbands,                // Source height
+      cudaMemcpyHostToDevice
+   );
+   cudaThreadSynchronize();
+   dA->apitch /= sizeof(float); // Want the pitch to be in float indices rather than bytes.
+   cudaMemcpy( (void*)(dA->bands), (void*)(hA->bands), hA->nbands * sizeof(int), cudaMemcpyHostToDevice );
+}
+
+void deviceFree( BandedMatrix* dA )
+{
+   cudaFree( dA->bands );
+   cudaFree( dA->a );
+}
+
+/*!
  * \brief b = A*x when A is a sparse banded matrix.
  *
  * Needs a.nbands * sizeof(int) shared memory.
