@@ -92,15 +92,15 @@ unsigned char* pgmread(char* filename, int* w, int* h)
  * \param filename The ppm file to read
  * \param w Output width
  * \param h Output height
+ * \param maxval Output maximum value.
  * \returns a pointer to the image in row-major RGB format. The calling
  *          function has responsibility to free the memory. A NULL is returned
  *          in the case of failure.
  */
-unsigned char* ppmread(char* filename, int* w, int* h)
+unsigned char* ppmread(char* filename, int* w, int* h, int* maxval)
 {
     FILE* file;
     char line[256];
-    int maxval;
     int binary;
     int nread;
     int numpix;
@@ -135,7 +135,13 @@ unsigned char* ppmread(char* filename, int* w, int* h)
 
     sscanf(line,"%d %d", w, h);
     fgets(line, 256, file);
-    sscanf(line, "%d", &maxval);
+    sscanf(line, "%d", maxval);
+    
+    if( *maxval < 0 || *maxval > 255 )
+    {
+       fprintf(stderr, "Error: maximum value %d is bad.\n", *maxval);
+       exit(1);
+    }
     
     numpix = (*w)*(*h);
     
@@ -169,6 +175,29 @@ unsigned char* ppmread(char* filename, int* w, int* h)
     
     fclose(file);
     return data;
+}
+
+/*!
+ * \brief Read a normalized floating-point image.
+ * 
+ * \sa ppmread()
+ */
+float* ppmread_float(char* filename, int* w, int* h )
+{
+   int maxval;
+   int i, numpix;
+   unsigned char* cdata;
+   float* fdata;
+   
+   cdata = ppmread(filename, w, h, &maxval);
+   numpix = (*w)*(*h);
+   fdata = (float*)malloc( 3*numpix*sizeof(float) );
+   
+   for( i = 0; i < numpix*3; ++i )
+      fdata[i] = static_cast<float>(cdata[i])/maxval;
+   
+   free(cdata);
+   return fdata;
 }
 
 /*!

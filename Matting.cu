@@ -13,7 +13,7 @@
  * NOTE: requires \c levinLaplacian_image to be a globally visible
  *       texture<float4,cudaTextureType2D,cudaReadModeElementType>
  * NOTE: requires \c levinLaplacian_trimap to be a globally visible
- *       texture<float4,cudaTextureType2D,cudaReadModeElementType>
+ *       texture<float,cudaTextureType2D,cudaReadModeElementType>
  * 
  * \param L output banded sparse Laplacian
  * \param b output right-hand side.
@@ -29,19 +29,42 @@ __device__ void levinLaplacian( BandedMatrix* L, float* b )
    const int i = blockIdx.x*blockDim.x + threadIdx.x;
    
    float u, v;
+   int du, dv;
+   
    float4 rgba;
    // Local covariance matrix (symmetric).
    float c11, c12, c13,
               c22, c23,
                    c33;
    float cdet;
+   // Local color average.
+   float4 mu;
+   
    // Local inverse of covariance matrix (symmetric).
    float d11, d12, d13,
               d22, d23,
                    d33;
    while(true)
    {
-      rgba = tex2D(levinLaplacian_image, u, v);
+      // Construct local covariance matrix in the window.
+      // NOTE: this will make some bad indexes into the texture.
+      //       Need to find out if that is ok with texture indexing.
+      c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
+      mu.x = mu.y = mu.z = mu.w = 0.f;
+      for( dv = -winRad; dv <= winRad; ++dv )
+      {
+         for( du = -winRad; du <= winRad; ++du )
+         {
+            rgba = tex2D(levinLaplacian_image, u+du, v+dv);
+            c11 += rgba.x*rgba.x;
+            c12 += rgba.x*rgba.y;
+            c13 += rgba.x*rgba.z;
+            c22 += rgba.y*rgba.y;
+            c23 += rgba.y*rgba.z;
+            c33 += rgba.z*rgba.z;
+         }
+      }
+      
       // Get the inverse.
       cdet = -c11*c12*c12 +
              c11*c11*c22 -

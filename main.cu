@@ -10,13 +10,13 @@ void help();
 
 int main(int argc, char* argv[])
 {
-   unsigned char* im;
+   float* im;
    int imW, imH;
    
    if( argc < 2 )
       help();
    
-   im = ppmread( argv[1], &imW, &imH );
+   im = ppmread_float( argv[1], &imW, &imH );
    
    free(im);
    return 0;
