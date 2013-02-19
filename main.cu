@@ -1,11 +1,17 @@
 #include <stdio.h>
-//#include "Matting.cu"
-//#include "Vector.cu"
+#include "ppm.h"
 #include "Matting.cu"
 
-
-int main()
+void help()
 {
+}
+
+int main(int argc, char* argv[])
+{
+   if( argc < 2 )
+      help();
+   
+   
    return 0;
 }
 

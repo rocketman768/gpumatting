@@ -18,10 +18,11 @@ unsigned char* pgmread(char* filename, int* w, int* h)
     int maxval;
     int binary;
     int nread;
+    int numpix;
     int i,j,k,int_tmp;
 
     unsigned char* data;
-    unsigned char*  bindata;
+    
     if ((file = fopen(filename, "r")) == NULL)
     {
        printf("ERROR: file open failed\n");
@@ -51,7 +52,9 @@ unsigned char* pgmread(char* filename, int* w, int* h)
     fgets(line, 256, file);
     sscanf(line, "%d", &maxval);
     
-    if ((data = (unsigned char*)calloc((*w)*(*h), sizeof(unsigned char*))) == NULL)
+    numpix = (*w)*(*h);
+    
+    if ((data = (unsigned char*)calloc(numpix, sizeof(unsigned char*))) == NULL)
     {
       printf("Memory allocation error. Exit program");
       exit(1);
@@ -59,7 +62,12 @@ unsigned char* pgmread(char* filename, int* w, int* h)
 
     if (binary)
     {
-       nread = fread( (void*)data, sizeof(unsigned char), (*w)*(*h), file);
+       nread = fread( (void*)data, sizeof(unsigned char), numpix, file);
+       if( nread != numpix )
+       {
+         fprintf(stderr, "Error: read %d/%d pixels.", nread, numpix);
+         exit(1);
+       }
     }
     else
     {
@@ -95,10 +103,11 @@ unsigned char* ppmread(char* filename, int* w, int* h)
     int maxval;
     int binary;
     int nread;
+    int numpix;
     int i,j,k,int_tmp;
 
     unsigned char* data;
-    unsigned char*  bindata;
+    
     if ((file = fopen(filename, "r")) == NULL)
     {
        printf("ERROR: file open failed\n");
@@ -128,7 +137,9 @@ unsigned char* ppmread(char* filename, int* w, int* h)
     fgets(line, 256, file);
     sscanf(line, "%d", &maxval);
     
-    if ((data = (unsigned char*)calloc((*w)*(*h)*3, sizeof(unsigned char*))) == NULL)
+    numpix = (*w)*(*h);
+    
+    if ((data = (unsigned char*)calloc(numpix*3, sizeof(unsigned char*))) == NULL)
     {
       printf("Memory allocation error. Exit program");
       exit(1);
@@ -136,7 +147,12 @@ unsigned char* ppmread(char* filename, int* w, int* h)
 
     if (binary)
     {
-       nread = fread( (void*)data, sizeof(unsigned char), (*w)*(*h)*3, file);
+       nread = fread( (void*)data, sizeof(unsigned char), numpix*3, file);
+       if( nread != numpix*3 )
+       {
+          fprintf(stderr, "Error: read %d/%d pixels.", nread/3, numpix);
+          exit(1);
+       }
     }
     else
     {
@@ -174,13 +190,11 @@ int pgmwrite(
 )
 {
     FILE* file;
-    char line[256];
     int maxval;
-    int binary;
     int nread;
-    int i,j,k,int_tmp;
-    unsigned char* temp;
-
+    int i,j,k;
+    int numpix = w*h;
+    
     if ((file = fopen(filename, "w")) == NULL)
     {
        printf("ERROR: file open failed\n");
@@ -196,7 +210,7 @@ int pgmwrite(
       fprintf(file,"# %s \n", comment_string);
 
     fprintf(file,"%d %d \n", w, h);
-
+    
     maxval = 0;
     k = 0;
     for (i = 0; i < h; i++)
@@ -213,7 +227,12 @@ int pgmwrite(
     
     if (binsave == 1)
     {
-      nread = fwrite(data, sizeof(unsigned char), (w)*(h), file);
+      nread = fwrite(data, sizeof(unsigned char), numpix, file);
+      if( nread != numpix )
+      {
+         fprintf(stderr, "Error: wrote %d/%d pixels.", nread, numpix);
+         exit(1);
+      }
     }
     else
     {
