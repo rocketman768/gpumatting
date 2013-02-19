@@ -4,6 +4,13 @@
 
 void help()
 {
+   fprintf(
+      stderr,
+      "Usage: matting <image>.ppm\n"
+      "  image - An RGB image to matte\n"
+   );
+   
+   exit(0);
 }
 
 int main(int argc, char* argv[])
