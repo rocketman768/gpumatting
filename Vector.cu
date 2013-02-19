@@ -8,6 +8,26 @@
 
 #include <device_functions.h>
 
+/*!
+ * \brief Copy a host vector to a device vector.
+ * \param leftPadding amount of 0-filled padding on the left of the vector.
+ * \param rightPadding amount of 0-filled padding ont he right of the vector.
+ */
+void vecCopyToDevice(float** dx, float const* hx, int length, int leftPadding=0, int rightPadding=0 )
+{
+   cudaMalloc((void**)dx, sizeof(float)*(length+leftPadding+rightPadding));
+   if( leftPadding )
+   {
+      cudaThreadSynchronize();
+      *dx += leftPadding;
+   }
+}
+
+void vecDeviceFree( float* dx, int leftPadding=0 )
+{
+   cudaFree(dx-leftPadding);
+}
+
 __device__ void reduceSequential()
 {
    extern __shared__ float sdata[];

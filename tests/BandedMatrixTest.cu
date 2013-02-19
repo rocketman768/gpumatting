@@ -45,9 +45,12 @@ int main()
    sharedBytesPerBlock = hA.nbands * sizeof(int);
    
    //++++++++++++++++++++++++++Kernel Invocation+++++++++++++++++++++++++++++++
-   cudaMalloc( (void**)&dx, N*sizeof(float) );
-   cudaMalloc( (void**)&db, N*sizeof(float) );
+   cudaMalloc( (void**)&dx, (N+10+10)*sizeof(float) );
+   cudaThreadSynchronize();
+   dx += 10;
    cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
+
+   cudaMalloc( (void**)&db, N*sizeof(float) );
    
    copyToDevice( &dA, &hA );
 
@@ -56,8 +59,8 @@ int main()
    
    deviceFree( &dA );
    cudaFree( db );
-   cudaFree( dx );
-   
+   cudaFree( dx - 10 );
+ 
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
    //--------------------------------------------------------------------------

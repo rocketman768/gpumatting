@@ -33,6 +33,8 @@ void deviceFree( BandedMatrix* dA )
  * \brief b = A*x when A is a sparse banded matrix.
  *
  * Needs a.nbands * sizeof(int) shared memory.
+ * NOTE: \c x must have 0 padding so that x[a.bands[i]] and x[N-1+a.bands[i]]
+ *       are valid indices into x for all i.
  */
 __device__ void bmAx( float* b, const BandedMatrix a, float const* x )
 {
