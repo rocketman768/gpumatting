@@ -11,10 +11,10 @@ void bmCopyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
    cudaMalloc( (void**)&(dA->bands),  hA->nbands * sizeof(int) );
    cudaMemcpy2D(
       (void*)(dA->a),            // Destination
-      dA->apitch,                // Destination pitch
+      dA->apitch,                // Destination pitch (bytes)
       (const void*)(hA->a),      // Source
-      hA->rows * sizeof(float),  // Source pitch
-      hA->rows * sizeof(float),  // Source width
+      hA->rows * sizeof(float),  // Source pitch (bytes)
+      hA->rows * sizeof(float),  // Source width (bytes)
       hA->nbands,                // Source height
       cudaMemcpyHostToDevice
    );

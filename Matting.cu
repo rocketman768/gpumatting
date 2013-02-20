@@ -71,8 +71,6 @@ __global__ void levinLaplacian(
    int vend   = min(imH-1,v+winRad);
    
    // Construct local covariance matrix in the window.
-   // NOTE: this will make some bad indexes into the texture.
-   //       Need to find out if that is ok with texture indexing.
    c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
    mu.x = mu.y = mu.z = mu.w = 0.f;
    numNeighbors = 0;
