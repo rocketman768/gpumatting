@@ -113,7 +113,7 @@ int main(int argc, char* argv[])
    
    printf("[");
    for( i = 0; i < L.nbands; ++i )
-      printf("%.3f, ", L.a[0 + i*L.apitch]);
+      printf("%.5e, ", L.a[100 + i*L.apitch]);
    printf("]\n");
    
    free(L.a);

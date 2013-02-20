@@ -29,7 +29,7 @@ __global__ void levinLaplacian(
    float* b,
    float lambda,
    float4* im,
-   int imW, int imH, int imPitch
+   int imW, int imH, size_t imPitch
 )
 {
    const float gamma = 1e1;
@@ -40,7 +40,7 @@ __global__ void levinLaplacian(
    const int v = blockIdx.y*blockDim.y + threadIdx.y;
    
    int u1, v1, u2, v2;
-   int i, j, iband, jband;
+   int i, j, iband, jbandoff;
    int numNeighbors;
    
    float4 rgba, white;
@@ -143,7 +143,8 @@ __global__ void levinLaplacian(
             for( u2 = u1+1; u2 < uend; ++u2 )
             {
                j = u2 + v2*imW;
-               jband = iband + (u2-u1) + (v2-v1)*(2*winRad+1);
+               // jbandoff \in [0,8] is the offset from the center band (a.k.a main diagonal, a.k.a iband).
+               jbandoff = (u2-u1) + (v2-v1)*(2*winRad+1);
                
                rgba = im[u2 + v2*imPitch];
                rgba.x -= mu.x;
@@ -153,9 +154,9 @@ __global__ void levinLaplacian(
                // -(1.0 + (x_j-mu)^T K^(-1) (x_i-mu))/winSize
                negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
                // L(i,j) += negSim
-               L.a[ i + jband*L.apitch ] += negSim;
+               L.a[ i + (iband+jbandoff)*L.apitch ] += negSim;
                // L(j,i) += negSim
-               L.a[ j + (iband-jband)*L.apitch ] += negSim;
+               L.a[ j + (iband-jbandoff)*L.apitch ] += negSim;
             }
          }
       }
