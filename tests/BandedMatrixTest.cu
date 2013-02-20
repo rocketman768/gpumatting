@@ -52,12 +52,12 @@ int main()
 
    cudaMalloc( (void**)&db, N*sizeof(float) );
    
-   copyToDevice( &dA, &hA );
+   bmCopyToDevice( &dA, &hA );
 
    bmAx_k<<<nBlocks, nThreadsPerBlock, sharedBytesPerBlock>>>(db, dA, dx);
    cudaMemcpy( (void*)hb, (void*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
    
-   deviceFree( &dA );
+   bmDeviceFree( &dA );
    cudaFree( db );
    cudaFree( dx - 10 );
  

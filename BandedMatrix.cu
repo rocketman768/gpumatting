@@ -3,7 +3,7 @@
 /*!
  * \brief Copy a host matrix to a device matrix.
  */
-void copyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
+void bmCopyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
 {
    *dA = *hA; 
 
@@ -23,7 +23,7 @@ void copyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
    cudaMemcpy( (void*)(dA->bands), (void*)(hA->bands), hA->nbands * sizeof(int), cudaMemcpyHostToDevice );
 }
 
-void deviceFree( BandedMatrix* dA )
+void bmDeviceFree( BandedMatrix* dA )
 {
    cudaFree( dA->bands );
    cudaFree( dA->a );
