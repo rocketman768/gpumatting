@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <cuda.h>
 
 /*!
  * \brief Reads a binary or ascii PGM (grayscale image) file.
@@ -195,6 +196,34 @@ float* ppmread_float(char* filename, int* w, int* h )
    
    for( i = 0; i < numpix*3; ++i )
       fdata[i] = static_cast<float>(cdata[i])/maxval;
+   
+   free(cdata);
+   return fdata;
+}
+
+/*!
+ * \brief Read normalized RGBA float4 image.
+ *
+ * \sa ppmread()
+ */
+float4* ppmread_float4(char* filename, int* w, int* h )
+{
+   int maxval;
+   int i, numpix;
+   unsigned char* cdata;
+   float4* fdata;
+   
+   cdata = ppmread(filename, w, h, &maxval);
+   numpix = (*w)*(*h);
+   fdata = (float4*)malloc( numpix*sizeof(float4) );
+   
+   for( i = 0; i < numpix; ++i )
+   {
+      fdata[i].x = static_cast<float>(cdata[3*i])/maxval;
+      fdata[i].y = static_cast<float>(cdata[3*i+1])/maxval;
+      fdata[i].z = static_cast<float>(cdata[3*i+2])/maxval;
+      fdata[i].w = 1.0f;
+   }
    
    free(cdata);
    return fdata;

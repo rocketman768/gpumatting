@@ -10,6 +10,8 @@
 /*!
  * \brief Generate Levin's Laplacian for a given image.
  * 
+ * Needs to be called with 2D blocks, enough for 1 thread/pixel
+ *
  * NOTE: requires \c levinLaplacian_image to be a globally visible
  *       texture<float4,cudaTextureType2D,cudaReadModeElementType>
  * NOTE: requires \c levinLaplacian_trimap to be a globally visible
@@ -18,25 +20,27 @@
  * \param L output banded sparse Laplacian
  * \param b output right-hand side.
  */
-__device__ void levinLaplacian( BandedMatrix* L, float* b )
+__global__ void levinLaplacian( BandedMatrix* L, float* b, float lambda, float4* im, int imH, int imW, int imPitch )
 {
-   extern texture<float4,cudaTextureType2D,cudaReadModeElementType> levinLaplacian_image;
-   extern texture<float,cudaTextureType2D,cudaReadModeElementType> levinLaplacian_trimap;
-   
    const float gamma = 1e1;
    const int winRad = 1;
-   const int nthreads = blockDim.x*gridDim.x;
-   const int i = blockIdx.x*blockDim.x + threadIdx.x;
+   //const int winSize = (2*winRad+1)*(2*winRad+1);
    
-   float u, v;
-   int du, dv;
+   const int u = blockIdx.x*blockDim.x + threadIdx.x;
+   const int v = blockIdx.y*blockDim.y + threadIdx.y;
    
-   float4 rgba;
+   int u1, v1, u2, v2;
+   int i, j;
+   int numNeighbors;
+   
+   float4 rgba, rgba2, white;
    // Local covariance matrix (symmetric).
    float c11, c12, c13,
               c22, c23,
                    c33;
+   // Determinant of covariance matrix.
    float cdet;
+   
    // Local color average.
    float4 mu;
    
@@ -44,39 +48,64 @@ __device__ void levinLaplacian( BandedMatrix* L, float* b )
    float d11, d12, d13,
               d22, d23,
                    d33;
-   while(true)
+
+   // Construct local covariance matrix in the window.
+   // NOTE: this will make some bad indexes into the texture.
+   //       Need to find out if that is ok with texture indexing.
+   c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
+   mu.x = mu.y = mu.z = mu.w = 0.f;
+   numNeighbors = 0;
+   for( v1 = v-winRad; v1 <= v+winRad; ++v1 )
    {
-      // Construct local covariance matrix in the window.
-      // NOTE: this will make some bad indexes into the texture.
-      //       Need to find out if that is ok with texture indexing.
-      c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
-      mu.x = mu.y = mu.z = mu.w = 0.f;
-      for( dv = -winRad; dv <= winRad; ++dv )
+      for( u1 = u-winRad; u1 <= u+winRad; ++u1 )
       {
-         for( du = -winRad; du <= winRad; ++du )
-         {
-            rgba = tex2D(levinLaplacian_image, u+du, v+dv);
-            c11 += rgba.x*rgba.x;
-            c12 += rgba.x*rgba.y;
-            c13 += rgba.x*rgba.z;
-            c22 += rgba.y*rgba.y;
-            c23 += rgba.y*rgba.z;
-            c33 += rgba.z*rgba.z;
-         }
+         rgba = im[u1 + v1*imPitch];
+         mu.x += rgba.x; mu.y += rgba.y; mu.z += rgba.z;
+         c11 += rgba.x*rgba.x;
+         c12 += rgba.x*rgba.y;
+         c13 += rgba.x*rgba.z;
+         c22 += rgba.y*rgba.y;
+         c23 += rgba.y*rgba.z;
+         c33 += rgba.z*rgba.z;
+         
+         ++numNeighbors;
       }
-      
-      // Get the inverse.
-      cdet = -c11*c12*c12 +
-             c11*c11*c22 -
-             c13*c13*c22 +
-             2*c12*c13*c23 -
-             c11*c23*c23;
-      d11 = (c11*c22 - c23*c23)/cdet;
-      d12 = (c13*c23 - c11*c12)/cdet;
-      d13 = (c12*c23 - c13*c22)/cdet;
-      d22 = (c11*c11 - c13*c13)/cdet;
-      d23 = (c12*c13 - c11*c23)/cdet;
-      d33 = (c11*c22 - c12*c12)/cdet;
+   }
+   mu.x /= numNeighbors; mu.y /= numNeighbors; mu.z /= numNeighbors;
+   c11 = (c11+lambda)/numNeighbors - mu.x*mu.x;
+   c12 = c12/numNeighbors          - mu.x*mu.y;
+   c13 = c13/numNeighbors          - mu.x*mu.z;
+   c22 = (c22+lambda)/numNeighbors - mu.y*mu.y;
+   c23 = c23/numNeighbors          - mu.y*mu.z;
+   c33 = (c33+lambda)/numNeighbors - mu.z*mu.z;
+   
+   // Get the inverse.
+   cdet = -c11*c12*c12 +
+          c11*c11*c22 -
+          c13*c13*c22 +
+          2*c12*c13*c23 -
+          c11*c23*c23;
+   d11 = (c11*c22 - c23*c23)/cdet;
+   d12 = (c13*c23 - c11*c12)/cdet;
+   d13 = (c12*c23 - c13*c22)/cdet;
+   d22 = (c11*c11 - c13*c13)/cdet;
+   d23 = (c12*c13 - c11*c23)/cdet;
+   d33 = (c11*c22 - c12*c12)/cdet;
+   
+   for( v1 = v-winRad; v1 <= v+winRad; ++v1 )
+   {
+      for( u1 = u-winRad; u1 <= u+winRad; ++u1 )
+      {
+         i = u1 + v1*imW;
+         rgba = im[u1 + v1*imPitch];
+         // Get the whitened pixel
+         rgba.x -= mu.x;
+         rgba.y -= mu.y;
+         rgba.z -= mu.z;
+         white.x = d11 * rgba.x + d12 * rgba.y + d13 * rgba.z;
+         white.y = d12 * rgba.x + d22 * rgba.y + d23 * rgba.z;
+         white.z = d13 * rgba.x + d13 * rgba.y + d33 * rgba.z;
+      }
    }
 }
 

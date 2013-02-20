@@ -3,20 +3,17 @@
 #include "ppm.h"
 #include "Matting.cu"
 
-texture<float4,cudaTextureType2D,cudaReadModeElementType> levinLaplacian_image;
-texture<float,cudaTextureType2D,cudaReadModeElementType> levinLaplacian_trimap;
-
 void help();
 
 int main(int argc, char* argv[])
 {
-   float* im;
+   float4* im;
    int imW, imH;
    
    if( argc < 2 )
       help();
    
-   im = ppmread_float( argv[1], &imW, &imH );
+   im = ppmread_float4( argv[1], &imW, &imH );
    
    free(im);
    return 0;
