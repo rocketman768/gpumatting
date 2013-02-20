@@ -29,12 +29,12 @@ __global__ void levinLaplacian(
    float* b,
    float lambda,
    float4* im,
-   int imH, int imW, int imPitch
+   int imW, int imH, int imPitch
 )
 {
    const float gamma = 1e1;
    const int winRad = 1;
-   const int winSize = (2*winRad+1)*(2*winRad+1);
+   const float winSize = (2*winRad+1)*(2*winRad+1);
    
    const int u = blockIdx.x*blockDim.x + threadIdx.x;
    const int v = blockIdx.y*blockDim.y + threadIdx.y;
@@ -43,7 +43,7 @@ __global__ void levinLaplacian(
    int i, j, iband, jband;
    int numNeighbors;
    
-   float4 rgba, rgba2, white;
+   float4 rgba, white;
    // Local covariance matrix (symmetric).
    float c11, c12, c13,
               c22, c23,
@@ -65,10 +65,16 @@ __global__ void levinLaplacian(
    if( u >= imW || v >= imH )
       return;
    
+   /*
    int ustart = max(0,u-winRad);
    int uend   = min(imW-1,u+winRad);
    int vstart = max(0,v-winRad);
    int vend   = min(imH-1,v+winRad);
+   */
+   int ustart = u-winRad; ustart = ustart < 0 ? 0 : ustart;
+   int uend   = u+winRad; uend   = uend >= imW? imW-1 : uend;
+   int vstart = v-winRad; vstart = vstart < 0 ? 0 : vstart;
+   int vend   = v+winRad; vend   = vend >= imH? imH-1 : vend;
    
    // Construct local covariance matrix in the window.
    c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
@@ -139,13 +145,13 @@ __global__ void levinLaplacian(
                j = u2 + v2*imW;
                jband = iband + (u2-u1) + (v2-v1)*(2*winRad+1);
                
-               rgba2 = im[u2 + v2*imPitch];
-               rgba2.x -= mu.x;
-               rgba2.y -= mu.y;
-               rgba2.z -= mu.z;
+               rgba = im[u2 + v2*imPitch];
+               rgba.x -= mu.x;
+               rgba.y -= mu.y;
+               rgba.z -= mu.z;
                
                // -(1.0 + (x_j-mu)^T K^(-1) (x_i-mu))/winSize
-               negSim = -(1.0f + white.x*rgba2.x + white.y*rgba2.y + white.z*rgba2.z)/winSize;
+               negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
                // L(i,j) += negSim
                L.a[ i + jband*L.apitch ] += negSim;
                // L(j,i) += negSim

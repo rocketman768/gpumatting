@@ -19,7 +19,8 @@ int main(int argc, char* argv[])
    float4* im;
    float4* dIm;
    float* dB;
-   int imW, imH, imPitch=0;
+   int imW, imH;
+   size_t imPitch=0;
    int i;
    
    if( argc < 2 )
@@ -64,7 +65,7 @@ int main(int argc, char* argv[])
    BandedMatrix dL;
    bmCopyToDevice( &dL, &L );
    
-   cudaMallocPitch( (void**)&dIm, (size_t*)&imPitch, imW * sizeof(float4), imH );
+   cudaMallocPitch( (void**)&dIm, &imPitch, imW * sizeof(float4), imH );
    cudaThreadSynchronize();
    imPitch /= sizeof(float4); // Want pitch in terms of elements, not bytes.
    cudaMemcpy2D(
@@ -76,7 +77,7 @@ int main(int argc, char* argv[])
       imH,                    // Source height
       cudaMemcpyHostToDevice
    );
-   
+   cudaThreadSynchronize();
    levinLaplacian<<<levinLapGridSize, levinLapBlockSize>>>(dL, dB, 1e-5, dIm, imW, imH, imPitch);
    
    cudaThreadSynchronize();

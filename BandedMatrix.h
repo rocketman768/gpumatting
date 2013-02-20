@@ -7,7 +7,7 @@ typedef struct BandedMatrix_s
    // column-major matrix format
    float* a;
    // The pitch >= rows between the rows of a[].
-   int apitch;
+   size_t apitch;
    
    // [-1,0,2] means a[i+0*apitch] is a_i(i-1),
    // a[i+1*apitch] is a_ii, and a[i+2*apitch] is a_i(i+2)

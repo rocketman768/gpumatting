@@ -7,7 +7,7 @@ void bmCopyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
 {
    *dA = *hA; 
 
-   cudaMallocPitch( (void**)&(dA->a), (size_t*)&(dA->apitch), hA->rows * sizeof(float), hA->nbands );
+   cudaMallocPitch( (void**)&(dA->a), &(dA->apitch), hA->rows * sizeof(float), hA->nbands );
    cudaMalloc( (void**)&(dA->bands),  hA->nbands * sizeof(int) );
    cudaMemcpy2D(
       (void*)(dA->a),            // Destination
