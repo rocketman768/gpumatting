@@ -19,6 +19,7 @@ int main(int argc, char* argv[])
       help();
    
    im = ppmread_float4( argv[1], &imW, &imH );
+   printf( "Image Size: %d x %d\n", imW, imH );
    
    BandedMatrix L;
    L.rows = imW*imH;
@@ -48,6 +49,8 @@ int main(int argc, char* argv[])
    memset( L.a, 0x00, L.nbands*L.rows * sizeof(float));
    L.apitch = L.rows;
    
+   dim3 levinLapBlockSize(32,32);
+   dim3 levinLapGridSize( ceil(imW/32), ceil(imH/32) );
    //=================GPU Time=======================
    BandedMatrix dL;
    bmCopyToDevice( &dL, &L );
@@ -65,9 +68,7 @@ int main(int argc, char* argv[])
       cudaMemcpyHostToDevice
    );
    
-   dim3 blocksize(32,32);
-   dim3 gridsize( ceil(imW/32), ceil(imH/32) );
-   levinLaplacian<<<blocksize, gridsize>>>(dL, dB, 1e-5, dIm, imW, imH, imPitch);
+   levinLaplacian<<<levinLapBlockSize, levinLapGridSize>>>(dL, dB, 1e-5, dIm, imW, imH, imPitch);
    
    cudaFree(dIm);
    bmDeviceFree( &dL );
@@ -80,7 +81,8 @@ int main(int argc, char* argv[])
    if( code )
       fprintf(stderr, "ERROR: %s\n", error_str);
    
-   printf("Pitch: %d\n", imPitch);
+   printf("Grid Dims  : %d x %d\n", imW/32, imH/32);
+   printf("Image Pitch: %d\n", imPitch);
    
    free(L.a);
    free(L.bands);
