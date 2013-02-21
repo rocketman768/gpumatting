@@ -22,6 +22,8 @@ d(8-7) = -(2*imW+2);
 
 i = repmat([1:N]',[1,17]);
 j = i + repmat(d,[N,1]);
+j(j <= 0) = 1;
+j(j > N) = 1;
 L = sparse(i,j,out',N,N);
 
 end

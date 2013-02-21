@@ -45,32 +45,38 @@ void hostLevinLaplacian(
    
    float4 rgba, white;
    // Local covariance matrix (symmetric).
-   float c11, c12, c13,
-              c22, c23,
-                   c33;
+   double c11, c12, c13,
+               c22, c23,
+                    c33;
    // Determinant of covariance matrix.
-   float cdet;
+   double cdet;
    
    // Local color average.
    float4 mu;
    
    // Local inverse of covariance matrix (symmetric).
-   float d11, d12, d13,
-              d22, d23,
-                   d33;
+   double d11, d12, d13,
+               d22, d23,
+                    d33;
 
    float negSim;
    
    iband = L.nbands/2;
    
-   for( v = 0; v < imH; ++v )
+   for( v = winRad; v < imH-winRad; ++v )
    {
-      for( u = 0; u < imW; ++u )
+      for( u = winRad; u < imW-winRad; ++u )
       {
+         /*
          int ustart = max(0,u-winRad);
          int uend   = min(imW-1,u+winRad);
          int vstart = max(0,v-winRad);
          int vend   = min(imH-1,v+winRad);
+         */
+         int ustart = u-winRad;
+         int uend   = u+winRad;
+         int vstart = v-winRad;
+         int vend   = v+winRad;
          
          // Construct local covariance matrix in the window.
          c11 = c12 = c13 = c22 = c23 = c33 = 0.f;
@@ -93,25 +99,29 @@ void hostLevinLaplacian(
             }
          }
          mu.x /= numNeighbors; mu.y /= numNeighbors; mu.z /= numNeighbors;
-         c11 = (c11+lambda)/numNeighbors - mu.x*mu.x;
-         c12 = c12/numNeighbors          - mu.x*mu.y;
-         c13 = c13/numNeighbors          - mu.x*mu.z;
-         c22 = (c22+lambda)/numNeighbors - mu.y*mu.y;
-         c23 = c23/numNeighbors          - mu.y*mu.z;
-         c33 = (c33+lambda)/numNeighbors - mu.z*mu.z;
+         c11 = c11/numNeighbors - mu.x*mu.x + lambda/numNeighbors;
+         c12 = c12/numNeighbors - mu.x*mu.y;
+         c13 = c13/numNeighbors - mu.x*mu.z;
+         c22 = c22/numNeighbors - mu.y*mu.y + lambda/numNeighbors;
+         c23 = c23/numNeighbors - mu.y*mu.z;
+         c33 = c33/numNeighbors - mu.z*mu.z + lambda/numNeighbors;
          
          // Get the inverse (without scaling by determinant).
+         /*
          cdet = -c11*c12*c12 +
                c11*c11*c22 -
                c13*c13*c22 +
                2*c12*c13*c23 -
                c11*c23*c23;
-         d11 = (c11*c22 - c23*c23);// /cdet;
-         d12 = (c13*c23 - c11*c12);// /cdet;
-         d13 = (c12*c23 - c13*c22);// /cdet;
-         d22 = (c11*c11 - c13*c13);// /cdet;
-         d23 = (c12*c13 - c11*c23);// /cdet;
-         d33 = (c11*c22 - c12*c12);// /cdet;
+         */
+         cdet = c11*c22*c33 + c12*c23*c13 + c13*c12*c23
+               -c13*c22*c13 - c12*c12*c33 - c11*c23*c23;
+         d11 = (c33*c22 - c23*c23);// /cdet;
+         d12 = (c13*c23 - c33*c12);// /cdet;
+         d13 = (c23*c12 - c22*c13);// /cdet;
+         d22 = (c33*c11 - c13*c13);// /cdet;
+         d23 = (c12*c13 - c23*c11);// /cdet;
+         d33 = (c22*c11 - c12*c12);// /cdet;
          
          for( v1 = vstart; v1 <= vend; ++v1 )
          {

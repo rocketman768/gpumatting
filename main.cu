@@ -83,7 +83,10 @@ int main(int argc, char* argv[])
    beg = clock();
    hostLevinLaplacian(L, b, 1e-5, im, scribs, imW, imH, imW);
    end = clock();
+   //dump1D( b, L.rows );
+   //return 0;
    dump2D( L.a, L.nbands, L.rows, L.rows );
+   return 0;
    //printf("Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    //------------------------------------------------
    
