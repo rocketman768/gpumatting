@@ -60,6 +60,7 @@ void hostLevinLaplacian(
                     d33;
 
    float negSim;
+   double rowSum;
    
    iband = L.nbands/2;
    
@@ -143,11 +144,15 @@ void hostLevinLaplacian(
                negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
                L.a[ i + iband*L.apitch] = negSim;
                
-               for( v2 = v1; v2 <= vend; ++v2 )
+               for( v2 = vstart; v2 <= vend; ++v2 )
                {
-                  for( u2 = u1+1; u2 <= uend; ++u2 )
+                  for( u2 = ustart; u2 <= uend; ++u2 )
                   {
                      j = u2 + v2*imW;
+                     // NOTE: need to find a better way
+                     if( j <= i )
+                        continue;
+                     
                      // jbandoff \in [0,8] is the offset from the center band (a.k.a main diagonal, a.k.a iband).
                      jbandoff = (u2-u1) + (v2-v1)*(2*winRad+1);
                      
@@ -176,13 +181,13 @@ void hostLevinLaplacian(
       for( u = 0; u < imW; ++u )
       {
          i = u + v*imW;
-         negSim = 0;
-         // negSim := \sum_j L(i,j)
+         rowSum = 0;
+         // rowSum := \sum_j L(i,j)
          for( jband = 0; jband < L.nbands; ++jband )
-            negSim += L.a[ i + jband*L.apitch ];
+            rowSum += L.a[ i + jband*L.apitch ];
          
-         // L(i,i) -= negSim
-         L.a[ i + iband*L.apitch ] -= negSim;
+         // L(i,i) -= rowSum
+         L.a[ i + iband*L.apitch ] -= rowSum;
          
          if( scribs[ u + v*imPitch ] == 255 )
          {

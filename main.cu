@@ -81,13 +81,13 @@ int main(int argc, char* argv[])
    b = (float*)malloc( L.rows * sizeof(float) );
    
    beg = clock();
-   hostLevinLaplacian(L, b, 1e-5, im, scribs, imW, imH, imW);
+   hostLevinLaplacian(L, b, 1e-2, im, scribs, imW, imH, imW);
    end = clock();
    //dump1D( b, L.rows );
    //return 0;
    dump2D( L.a, L.nbands, L.rows, L.rows );
+   fprintf(stderr,"Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    return 0;
-   //printf("Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    //------------------------------------------------
    
    dim3 levinLapBlockSize(16,16);
