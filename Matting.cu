@@ -145,7 +145,7 @@ void hostLevinLaplacian(
                
                for( v2 = v1; v2 <= vend; ++v2 )
                {
-                  for( u2 = u1+1; u2 < uend; ++u2 )
+                  for( u2 = u1+1; u2 <= uend; ++u2 )
                   {
                      j = u2 + v2*imW;
                      // jbandoff \in [0,8] is the offset from the center band (a.k.a main diagonal, a.k.a iband).
