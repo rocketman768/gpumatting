@@ -137,7 +137,7 @@ void hostLevinLaplacian(
                rgba.z -= mu.z;
                white.x = (d11 * rgba.x + d12 * rgba.y + d13 * rgba.z)/cdet;
                white.y = (d12 * rgba.x + d22 * rgba.y + d23 * rgba.z)/cdet;
-               white.z = (d13 * rgba.x + d13 * rgba.y + d33 * rgba.z)/cdet;
+               white.z = (d13 * rgba.x + d23 * rgba.y + d33 * rgba.z)/cdet;
                
                // Self-similarity L(i,i)
                negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
