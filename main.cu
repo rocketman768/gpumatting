@@ -42,7 +42,6 @@ int main(int argc, char* argv[])
    int dAlpha_pad;
    int imW, imH;
    int scribW, scribH;
-   size_t imPitch=0;
    int i;
    clock_t beg,end;
    
@@ -143,7 +142,6 @@ int main(int argc, char* argv[])
    printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
    printf("Image Size: %d x %d\n", imW, imH );
    printf("Grid Dims  : %u x %u\n", levinLapGridSize.x, levinLapGridSize.y );
-   printf("Image Pitch: %lu\n", imPitch);
    
    pgmwrite_float("alpha.pgm", imW, imH, alpha, "", 1);
    
@@ -225,15 +223,13 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    
    float kDebug;
    
-   cudaMalloc((void**)&d, (2*pad+N)*sizeof(float));
+   vecDeviceMalloc(&d, N, pad, pad);
    cudaMalloc((void**)&e, N*sizeof(float));
-   cudaMalloc((void**)&f, (2*pad+N)*sizeof(float));
+   vecDeviceMalloc(&f, N, pad, pad);
    cudaMalloc((void**)&k, 1*sizeof(float));
    cudaMalloc((void**)&tmp, 1*sizeof(float));
    
    cudaThreadSynchronize();
-   d += pad;
-   f += pad;
    
    // Do the gradient descent iteration.
    while( iterations-- > 0 )
@@ -268,9 +264,7 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    
    cudaFree(tmp);
    cudaFree(k);
-   f -= pad;
-   cudaFree(f);
+   vecDeviceFree(f, pad);
    cudaFree(e);
-   d -= pad;
-   cudaFree(d);
+   vecDeviceFree(d, pad);
 }

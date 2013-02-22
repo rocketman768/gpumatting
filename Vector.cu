@@ -8,6 +8,15 @@
 
 #include <device_functions.h>
 
+void vecDeviceMalloc(float** dx, int length, int leftPadding=0, int rightPadding=0)
+{
+   cudaMalloc((void**)dx, sizeof(float)*(length+leftPadding+rightPadding));
+   cudaThreadSynchronize();
+   cudaMemset((void*)*dx, 0x00, sizeof(float)*(length+leftPadding+rightPadding));
+   if( leftPadding )
+      *dx += leftPadding;
+}
+
 /*!
  * \brief Copy a host vector to a device vector.
  * \param leftPadding amount of 0-filled padding on the left of the vector.
@@ -15,11 +24,7 @@
  */
 void vecCopyToDevice(float** dx, float const* hx, int length, int leftPadding=0, int rightPadding=0 )
 {
-   cudaMalloc((void**)dx, sizeof(float)*(length+leftPadding+rightPadding));
-   cudaThreadSynchronize();
-   cudaMemset((void*)*dx, 0x00, sizeof(float)*(length+leftPadding+rightPadding));
-   if( leftPadding )
-      *dx += leftPadding;
+   vecDeviceMalloc(dx, length, leftPadding, rightPadding);
    cudaMemcpy((void*)*dx, (void*)hx, sizeof(float)*length, cudaMemcpyHostToDevice);
 }
 
