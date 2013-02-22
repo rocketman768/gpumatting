@@ -269,6 +269,8 @@ int pgmwrite(
 
     fprintf(file,"%d %d \n", w, h);
     
+    // I think this is wrong.
+    /*
     maxval = 0;
     k = 0;
     for (i = 0; i < h; i++)
@@ -280,7 +282,9 @@ int pgmwrite(
          ++k;
        }
     }
-
+   */
+    
+    maxval = 255;
     fprintf(file, "%d \n", maxval);
     
     if (binsave == 1)

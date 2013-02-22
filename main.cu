@@ -116,7 +116,7 @@ int main(int argc, char* argv[])
    
    cudaMalloc((void**)&dAlpha, (L.rows+L.bands[16]*2)*sizeof(float));
    cudaThreadSynchronize();
-   //dAlpha += L.bands[16];
+   dAlpha += L.bands[16];
    cudaMemcpy((void*)dAlpha, (void*)alpha, L.rows*sizeof(float), cudaMemcpyHostToDevice);
    
    //+++++++++++++++++++++++++++++
@@ -125,7 +125,7 @@ int main(int argc, char* argv[])
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
    
-   //dAlpha -= L.bands[16];
+   dAlpha -= L.bands[16];
    cudaFree(dAlpha);
    cudaFree(dB);
    bmDeviceFree( &dL );
