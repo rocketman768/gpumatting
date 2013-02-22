@@ -192,7 +192,7 @@ void hostLevinLaplacian(
          if( scribs[ u + v*imPitch ] == 255 )
          {
             L.a[ i + iband*L.apitch ] += gamma;
-            b[i] = gamma;
+            b[i] = 2*gamma;
          }
          else if( scribs[ u + v*imPitch ] == 0 )
          {

@@ -106,8 +106,6 @@ int main(int argc, char* argv[])
    
    // Pad alpha by a multiple of 32 that is larger than (2*imW+2).
    dAlpha_pad = ((2*imW+2)/32)*32+32;
-   dim3 levinLapBlockSize(16,16);
-   dim3 levinLapGridSize( myceildiv(imW,16), myceildiv(imH,16) );
    
    //=================GPU Time=======================
    BandedMatrix dL;
@@ -119,7 +117,7 @@ int main(int argc, char* argv[])
    vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
    
    //+++++++++++++++++++++++++++++
-   gradSolve(dAlpha, dL, dB, 1, dAlpha_pad);
+   gradSolve(dAlpha, dL, dB, 100, dAlpha_pad);
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
@@ -141,12 +139,8 @@ int main(int argc, char* argv[])
    printf("Pitch: %lu, %lu\n", L.apitch, dL.apitch);
    printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
    printf("Image Size: %d x %d\n", imW, imH );
-   printf("Grid Dims  : %u x %u\n", levinLapGridSize.x, levinLapGridSize.y );
    
    pgmwrite_float("alpha.pgm", imW, imH, alpha, "", 1);
-   
-   for( i = 0; i < 10; ++i )
-      printf("%.2e, ", alpha[i + 200 + 200*imW]);
    
    free(alpha);
    free(b);
