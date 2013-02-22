@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
    cudaMemcpy((void*)dAlpha, (void*)alpha, L.rows*sizeof(float), cudaMemcpyHostToDevice);
    
    //+++++++++++++++++++++++++++++
-   //gradSolve(dAlpha, dL, dB, 1);
+   gradSolve(dAlpha, dL, dB, 1);
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
