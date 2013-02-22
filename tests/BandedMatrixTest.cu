@@ -106,6 +106,6 @@ int main()
    free(hA.a);
    free(hb);
    free(hx);
-   return 0;
+   return passed?0:1;
 }
 

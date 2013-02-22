@@ -100,9 +100,8 @@ int main(int argc, char* argv[])
    end = clock();
    //dump1D( b, L.rows );
    //return 0;
-   dump2D( L.a, L.nbands, L.rows, L.rows );
+   //dump2D( L.a, L.nbands, L.rows, L.rows );
    fprintf(stderr,"Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
-   return 0;
    //------------------------------------------------
    
    dim3 levinLapBlockSize(16,16);
@@ -117,16 +116,16 @@ int main(int argc, char* argv[])
    
    cudaMalloc((void**)&dAlpha, (L.rows+L.bands[16]*2)*sizeof(float));
    cudaThreadSynchronize();
-   dAlpha += L.bands[16];
+   //dAlpha += L.bands[16];
    cudaMemcpy((void*)dAlpha, (void*)alpha, L.rows*sizeof(float), cudaMemcpyHostToDevice);
    
    //+++++++++++++++++++++++++++++
-   gradSolve(dAlpha, dL, dB, 100);
+   //gradSolve(dAlpha, dL, dB, 1);
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
    
-   dAlpha -= L.bands[16];
+   //dAlpha -= L.bands[16];
    cudaFree(dAlpha);
    cudaFree(dB);
    bmDeviceFree( &dL );
@@ -233,16 +232,11 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations)
    {
       // d := 2*L*alpha - b = gradient(alpha'*L*alpha - alpha'*b)
       vecScaleConst_k<<<16,1024>>>( f, alpha, 2.0f, N );
+      /*
       bmAxpy_k<17,false><<<16,1024>>>(d, L, f, b);
       
       // If the gradient magnitude is small enough, we're done.
-      /*
-      innerProd(&tmp, d, d, N);
-
-      __syncthreads();
-      if( tmp < 1e-5 )
-         break;
-      */
+      //innerProd(&tmp, d, d, N);
       
       // k := <d,b>
       innerProd_k<<<16,1024>>>(k, d, b, N);
@@ -263,6 +257,7 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations)
       // alpha += k*d
       vecScale_k<<<16,1024>>>( d, d, k, N );
       vecAdd_k<<<16,1024>>>( alpha, alpha, d, N );
+      */
    }
    
    cudaFree(tmp);

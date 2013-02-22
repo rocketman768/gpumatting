@@ -335,7 +335,7 @@ int pgmwrite_float(
    numpix = w*h;
    cdata = (unsigned char*)malloc( numpix * sizeof(unsigned char) );
    
-   for( i = 0; i < numpix*3; ++i )
+   for( i = 0; i < numpix; ++i )
       cdata[i] = data[i] < 0.f ? 0 : (data[i]>1.f?255:(static_cast<unsigned char>(255.f*data[i])));
    ret = pgmwrite(filename, w, h, cdata, comment_string, binsave);
    

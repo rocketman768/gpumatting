@@ -38,6 +38,14 @@ int main()
    // Wait for GPU to finish all that shit.
    cudaThreadSynchronize();
    
-   printf("result: %.2e\n", hresult);
+   if( fabs(hresult-2e6) < 1e-5 )
+      printf("Test PASSED\n");
+   else
+   {
+      printf("Test FAILED\n");
+      printf("result: %.2e\n", hresult);
+      return 1;
+   }
+   
    return 0;
 }
