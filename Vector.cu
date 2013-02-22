@@ -16,11 +16,11 @@
 void vecCopyToDevice(float** dx, float const* hx, int length, int leftPadding=0, int rightPadding=0 )
 {
    cudaMalloc((void**)dx, sizeof(float)*(length+leftPadding+rightPadding));
+   cudaThreadSynchronize();
+   cudaMemset((void*)*dx, 0x00, sizeof(float)*(length+leftPadding+rightPadding));
    if( leftPadding )
-   {
-      cudaThreadSynchronize();
       *dx += leftPadding;
-   }
+   cudaMemcpy((void*)*dx, (void*)hx, sizeof(float)*length, cudaMemcpyHostToDevice);
 }
 
 void vecDeviceFree( float* dx, int leftPadding=0 )
@@ -109,16 +109,11 @@ __device__ void vecAdd( float* result, float const* x, float const* y, int len )
    int i = blockDim.x * blockIdx.x + threadIdx.x;
    int ti = threadIdx.x;
    
-   while( true )
+   while( i < len )
    {
-      // Sync so that the memory addresses line up below.
-      __syncthreads();
-      if( i < len )
-         result[i] = x[i]+y[i];
+      result[i] = x[i]+y[i];
       
-      // This is true iff this is the last iteration.
-      if( len - i <= nthreads )
-         break;
+      i += nthreads;
    }
 }
 
@@ -143,16 +138,10 @@ __device__ void vecScale( float* result, float const* x, float s, int len )
    int i = blockDim.x * blockIdx.x + threadIdx.x;
    int ti = threadIdx.x;
    
-   while( true )
+   while( i < len )
    {
-      // Sync so that the memory addresses line up below.
-      __syncthreads();
-      if( i < len )
-         result[i] = s*x[i];
-      
-      // This is true iff this is the last iteration.
-      if( len - i <= nthreads )
-         break;
+      result[i] = s*x[i];
+      i += nthreads;
    }
 }
 
