@@ -147,6 +147,8 @@ int main(int argc, char* argv[])
    printf("Grid Dims  : %u x %u\n", levinLapGridSize.x, levinLapGridSize.y );
    printf("Image Pitch: %lu\n", imPitch);
    
+   pgmwrite_float("alpha.pgm", imW, imH, alpha, "", 1);
+   
    free(alpha);
    free(b);
    free(L.a);

@@ -305,3 +305,40 @@ int pgmwrite(
     fclose(file);
     return 0;
 }
+
+/*!
+ * \brief Write a PGM image from normalized floating point data.
+ * 
+ * The floats will be interpreted as black==0 and white==1,
+ * values between are quantized to 8-bit grayscale, and
+ * values outside that range will be clamped to black or white.
+ * 
+ * \param filename The file to write to.
+ * \param w Image width
+ * \param h Image height
+ * \param data Row-major image data
+ * \param comment_string Comments (NULL if none)
+ * \param binsave 1 for binary writing, 0 for text writing
+ */
+int pgmwrite_float(
+   char* filename,
+   int w, int h,
+   float* data, 
+   const char* comment_string,
+   int binsave
+)
+{
+   int i, numpix;
+   int ret;
+   unsigned char* cdata;
+   
+   numpix = w*h;
+   cdata = (unsigned char*)malloc( numpix * sizeof(unsigned char) );
+   
+   for( i = 0; i < numpix*3; ++i )
+      cdata[i] = data[i] < 0.f ? 0 : (data[i]>1.f?255:(static_cast<unsigned char>(255.f*data[i])));
+   ret = pgmwrite(filename, w, h, cdata, comment_string, binsave);
+   
+   free(cdata);
+   return ret;
+}
