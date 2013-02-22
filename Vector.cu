@@ -122,6 +122,11 @@ __device__ void vecAdd( float* result, float const* x, float const* y, int len )
    }
 }
 
+__global__ void vecAdd_k( float* result, float const* x, float const* y, int len )
+{
+   vecAdd( result, x, y, len );
+}
+
 /*!
  * \brief Scale vector by a constant. Can be in-place.
  * 
@@ -151,6 +156,16 @@ __device__ void vecScale( float* result, float const* x, float s, int len )
    }
 }
 
+__global__ void vecScaleConst_k( float* result, float const* x, float s, int len )
+{
+   vecScale( result, x, s, len );
+}
+
+__global__ void vecScale_k( float* result, float const* x, float* s, int len )
+{
+   vecScale( result, x, *s, len );
+}
+
 /*!
  * \brief Stores inner product of \c x and \c y of length \c len in \c result.
  * 
@@ -177,11 +192,12 @@ __device__ void innerProd( float* result, float const* x, float const* y, int le
   
    // Doesn't work for some reason? 
    //if( i == 0 )
-   //   *result = 0.f;
+      *result = 0.f;
    
    // Wait for all the shared data to be fully populated.
    __syncthreads();
    
+   /*
    switch( blockDim.x )
    {
       case 1024:
@@ -218,6 +234,9 @@ __device__ void innerProd( float* result, float const* x, float const* y, int le
          reduceUnrolled<1>();
          break;
    }
+   */
+   
+   reduceSequential();
    
    // Need each block to contribute its final result to the global result.
    if( ti == 0 )

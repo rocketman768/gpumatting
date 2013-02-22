@@ -5,6 +5,7 @@
 #include "BandedMatrix.h"
 #include "BandedMatrix.cu"
 #include "Matting.cu"
+#include "Vector.cu"
 
 //! \brief Print help message and exit.
 void help();
@@ -12,6 +13,15 @@ void help();
 void dump1D( float* a, int n );
 //! \brief Dump row-major matrix to stdout in %.5e format.
 void dump2D( float* a, int rows, int cols, size_t pitch );
+/*!
+ * \brief Solve L*alpha = b by gradient descent.
+ * 
+ * \param alpha device vector of size L.rows
+ * \param L device banded matrix
+ * \param b device vector of size L.rows
+ * \param iterations number of gradient descent steps before termination
+ */
+void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations);
 
 int myceildiv(int a, int b)
 {
@@ -27,6 +37,8 @@ int main(int argc, char* argv[])
    unsigned char* scribs;
    float* b;
    float* dB;
+   float* alpha;
+   float* dAlpha;
    int imW, imH;
    int scribW, scribH;
    size_t imPitch=0;
@@ -79,6 +91,9 @@ int main(int argc, char* argv[])
    L.apitch = L.rows;
    
    b = (float*)malloc( L.rows * sizeof(float) );
+   alpha = (float*)malloc(L.rows * sizeof(float));
+   for( i = 0; i < L.rows; ++i )
+      alpha[i] = 0.5f;
    
    beg = clock();
    hostLevinLaplacian(L, b, 1e-2, im, scribs, imW, imH, imW);
@@ -97,37 +112,23 @@ int main(int argc, char* argv[])
    BandedMatrix dL;
    bmCopyToDevice( &dL, &L );
    
-   /*
-   cudaMallocPitch( (void**)&dIm, &imPitch, imW * sizeof(float4), imH );
-   cudaThreadSynchronize();
-   imPitch /= sizeof(float4); // Want pitch in terms of elements, not bytes.
-   cudaMemcpy2D(
-      (void*)dIm,             // Destination
-      imPitch*sizeof(float4), // Destination pitch (bytes)
-      (const void*)im,        // Source
-      imW * sizeof(float4),   // Source pitch (bytes)
-      imW * sizeof(float4),   // Source width (bytes)
-      imH,                    // Source height
-      cudaMemcpyHostToDevice
-   );
-   cudaThreadSynchronize();
-   levinLaplacian<<<levinLapGridSize, levinLapBlockSize>>>(dL, dB, 1e-5, dIm, imW, imH, imPitch);
+   cudaMalloc((void**)&dB, L.rows*sizeof(float));
+   cudaMemcpy((void*)dB, (void*)b, L.rows*sizeof(float), cudaMemcpyHostToDevice);
    
+   cudaMalloc((void**)&dAlpha, (L.rows+L.bands[16]*2)*sizeof(float));
    cudaThreadSynchronize();
-
-   cudaMemcpy2D(
-      (void*)L.a,                 // Destination
-      L.apitch * sizeof(float),   // Destination pitch (bytes)
-      (const void*)dL.a,          // Source
-      dL.apitch * sizeof(float),  // Source pitch (bytes)
-      dL.rows * sizeof(float),    // Source width (bytes)
-      dL.nbands,                  // Source height
-      cudaMemcpyDeviceToHost
-   );
+   dAlpha += L.bands[16];
+   cudaMemcpy((void*)dAlpha, (void*)alpha, L.rows*sizeof(float), cudaMemcpyHostToDevice);
    
-   cudaFree(dIm);
-   */
+   //+++++++++++++++++++++++++++++
+   gradSolve(dAlpha, dL, dB, 100);
+   //+++++++++++++++++++++++++++++
    
+   cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
+   
+   dAlpha -= L.bands[16];
+   cudaFree(dAlpha);
+   cudaFree(dB);
    bmDeviceFree( &dL );
    
    cudaThreadSynchronize();
@@ -146,11 +147,7 @@ int main(int argc, char* argv[])
    printf("Grid Dims  : %u x %u\n", levinLapGridSize.x, levinLapGridSize.y );
    printf("Image Pitch: %lu\n", imPitch);
    
-   printf("[");
-   for( i = 0; i < L.nbands; ++i )
-      printf("%.5e, ", L.a[100 + i*L.apitch]);
-   printf("]\n");
-   
+   free(alpha);
    free(b);
    free(L.a);
    free(L.bands);
@@ -187,4 +184,88 @@ void dump2D( float* a, int rows, int cols, size_t pitch )
          printf("%.5e, ", a[j + i*pitch]);
       printf("%.5e\n", a[j + i*pitch]);
    }
+}
+
+__global__ void addScalar( float* k, float* val )
+{
+   *k += *val;
+}
+
+__global__ void subScalar( float* k, float* val )
+{
+   *k -= *val;
+}
+
+__global__ void multScalar( float* k, float* val )
+{
+   *k *= *val;
+}
+
+__global__ void multScalarConst( float* k, float val )
+{
+   *k *= val;
+}
+
+__global__ void divScalar( float* k, float* val )
+{
+   *k /= *val;
+}
+
+void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations)
+{
+   float* d;
+   float* e;
+   float* f;
+   float* k;
+   int N = L.rows;
+   float* tmp;
+   
+   cudaMalloc((void**)&d, N*sizeof(float));
+   cudaMalloc((void**)&e, N*sizeof(float));
+   cudaMalloc((void**)&f, N*sizeof(float));
+   cudaMalloc((void**)&k, 1*sizeof(float));
+   cudaMalloc((void**)&tmp, 1*sizeof(float));
+   
+   // Do the gradient descent iteration.
+   while( iterations-- > 0 )
+   {
+      // d := 2*L*alpha - b = gradient(alpha'*L*alpha - alpha'*b)
+      vecScaleConst_k<<<16,1024>>>( f, alpha, 2.0f, N );
+      bmAxpy_k<17,false><<<16,1024>>>(d, L, f, b);
+      
+      // If the gradient magnitude is small enough, we're done.
+      /*
+      innerProd(&tmp, d, d, N);
+
+      __syncthreads();
+      if( tmp < 1e-5 )
+         break;
+      */
+      
+      // k := <d,b>
+      innerProd_k<<<16,1024>>>(k, d, b, N);
+      
+      // e := H*d
+      bmAx_k<17><<<16,1024>>>(e, L, d);
+      
+      // k -= 2*<e,alpha>
+      innerProd_k<<<16,1024>>>( tmp, e, alpha, N );
+      multScalarConst<<<1,1>>>(tmp, 2.0f);
+      subScalar<<<1,1>>>(k,tmp);
+      
+      // k /= 2*<e,d>
+      innerProd_k<<<16,1024>>>( tmp, e, d, N );
+      multScalarConst<<<1,1>>>(tmp, 2.0f);
+      divScalar<<<1,1>>>(k, tmp);
+      
+      // alpha += k*d
+      vecScale_k<<<16,1024>>>( d, d, k, N );
+      vecAdd_k<<<16,1024>>>( alpha, alpha, d, N );
+   }
+   
+   cudaFree(tmp);
+   cudaFree(k);
+   cudaFree(f);
+   cudaFree(e);
+   cudaFree(d);
 }

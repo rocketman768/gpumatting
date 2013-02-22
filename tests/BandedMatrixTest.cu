@@ -42,7 +42,7 @@ int main()
          hA.a[i + 2*hA.rows] = 1;
    }
    
-   sharedBytesPerBlock = hA.nbands * sizeof(int);
+   //sharedBytesPerBlock = hA.nbands * sizeof(int);
    
    //++++++++++++++++++++++++++Kernel Invocation+++++++++++++++++++++++++++++++
    cudaMalloc( (void**)&dx, (N+10+10)*sizeof(float) );
@@ -54,7 +54,7 @@ int main()
    
    bmCopyToDevice( &dA, &hA );
 
-   bmAx_k<<<nBlocks, nThreadsPerBlock, sharedBytesPerBlock>>>(db, dA, dx);
+   bmAx_k<3><<<nBlocks, nThreadsPerBlock>>>(db, dA, dx);
    cudaMemcpy( (void*)hb, (void*)db, N*sizeof(float), cudaMemcpyDeviceToHost );
    
    bmDeviceFree( &dA );
