@@ -16,12 +16,24 @@ void dump2D( float* a, int rows, int cols, size_t pitch );
 /*!
  * \brief Solve L*alpha = b by gradient descent.
  * 
- * \param alpha device vector of size L.rows
+ * \param alpha device vector of size L.rows padded properly to make \c L * \c alpha work.
  * \param L device banded matrix
  * \param b device vector of size L.rows
  * \param iterations number of gradient descent steps before termination
+ * \param pad The size of left and right vector padding to make \c L * x work for a vector x.
  */
 void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad);
+/*!
+ * \brief Solve L*alpha = b by conjugate-gradient descent.
+ * 
+ * \param alpha device vector of size L.rows padded properly to make \c L * \c alpha work.
+ * \param L device banded matrix
+ * \param b device vector of size L.rows
+ * \param pad The size of left and right vector padding to make \c L * x work for a vector x.
+ * \param iterations number of steps before termination
+ * \param restartInterval restart cg after this many iterations (typically about 50)
+ */
+void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, int restartInterval);
 
 int myceildiv(int a, int b)
 {
@@ -206,6 +218,11 @@ __global__ void divScalar( float* k, float* val )
    *k /= *val;
 }
 
+__global__ void divScalar2( float* lhs, float* num, float* den )
+{
+   *lhs = *num / *den;
+}
+
 void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
 {
    float* d;
@@ -261,4 +278,75 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    vecDeviceFree(f, pad);
    cudaFree(e);
    vecDeviceFree(d, pad);
+}
+
+void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, int restartInterval)
+{
+   float* r;
+   float* p;
+   float* Lp;
+   float* kp;
+   float* k;
+   int N = L.rows;
+   float* tmp;
+   
+   int innerIter = restartInterval;
+   
+   vecDeviceMalloc(&r, N, pad, pad);
+   vecDeviceMalloc(&p, N, pad, pad);
+   vecDeviceMalloc(&Lp, N, pad, pad);
+   vecDeviceMalloc(&kp, N, 0, 0);
+   cudaMalloc((void**)&k, 1*sizeof(float));
+   cudaMalloc((void**)&tmp, 1*sizeof(float));
+   
+   cudaThreadSynchronize();
+   
+   // r := L*alpha - b
+   bmAxpy_k<17,false><<<16,1024>>>(r, L, alpha, b);
+   // p = -r
+   vecScaleConst_k<<<16,1024>>>(p, r, -1.0f, N);
+   
+   // Do the conjugate gradient iterations.
+   while( iterations-- > 0 )
+   {
+      if( innerIter == 0 )
+      {
+         // r := L*alpha - b
+         bmAxpy_k<17,false><<<16,1024>>>(r, L, alpha, b);
+         // p = -r
+         vecScaleConst_k<<<16,1024>>>(p, r, -1.0f, N);
+         
+         innerIter = restartInterval-1;
+      }
+      else
+         --innerIter;
+      
+      // Lp := L*p
+      bmAx_k<17><<<16,1024>>>(Lp, L, p);
+      
+      // k = <r,r>/<p,p>_L
+      innerProd_k<<<16,1024,1024*sizeof(float)>>>(tmp, r, r, N);
+      innerProd_k<<<16,1024,1024*sizeof(float)>>>(k, p, Lp, N);
+      divScalar2<<<1,1>>>(k,tmp,k);
+      
+      // alpha += k*p
+      vecScale_k<<<16,1024>>>(kp, p, k, N);
+      vecAdd_k<<<16,1024>>>(alpha, alpha, kp, N);
+      
+      // r += k*L*p
+      vecScale_k<<<16,1024>>>(Lp, Lp, k, N);
+      vecAdd_k<<<16,1024>>>(r, r, Lp, N);
+      
+      // k = <r,r>/<r_old,r_old>
+      innerProd_k<<<16,1024,1024*sizeof(float)>>>(k, r, r, N);
+      divScalar<<<1,1>>>(k,tmp);
+      
+      // p = k*p - r;
+      vecSub_k<<<16,1024>>>( p, kp, r, N );
+   }
+   
+   cudaFree(tmp);
+   cudaFree(k);
+   vecDeviceFree(p, pad);
+   vecDeviceFree(r, pad);
 }

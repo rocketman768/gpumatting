@@ -103,11 +103,13 @@ __device__ void reduceUnrolled()
  * 
  * Shared memory: 0
  * 
+ * \tparam add If true, add vectors, else subtract.
  * \param result output vector \c x + \c y. May be \c x or \c y.
  * \param x input vector
  * \param y second input vector
  * \param len number of elements in \c x, \c y, and \c result.
  */
+template<bool add>
 __device__ void vecAdd( float* result, float const* x, float const* y, int len )
 {
    int nthreads = blockDim.x*gridDim.x;
@@ -116,7 +118,10 @@ __device__ void vecAdd( float* result, float const* x, float const* y, int len )
    
    while( i < len )
    {
-      result[i] = x[i]+y[i];
+      if( add )
+         result[i] = x[i]+y[i];
+      else
+         result[i] = x[i]-y[i];
       
       i += nthreads;
    }
@@ -124,7 +129,12 @@ __device__ void vecAdd( float* result, float const* x, float const* y, int len )
 
 __global__ void vecAdd_k( float* result, float const* x, float const* y, int len )
 {
-   vecAdd( result, x, y, len );
+   vecAdd<true>( result, x, y, len );
+}
+
+__global__ void vecSub_k( float* result, float const* x, float const* y, int len )
+{
+   vecAdd<false>( result, x, y, len );
 }
 
 /*!
