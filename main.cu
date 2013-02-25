@@ -34,6 +34,15 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
  * \param restartInterval restart cg after this many iterations (typically about 50)
  */
 void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, int restartInterval);
+/*!
+ * \brief Compute and display matte ground truth errors.
+ *
+ * \param alpha Computed alpha matte
+ * \param gtAlpha Ground truth alpha matte
+ * \param imW Matte width
+ * \param imH Matte height
+ */
+void computeError( float* alpha, float* gtAlpha, int imW, int imH );
 
 int myceildiv(int a, int b)
 {
@@ -52,8 +61,10 @@ int main(int argc, char* argv[])
    float* alpha;
    float* dAlpha;
    int dAlpha_pad;
+   float* alphaGt = 0;
    int imW, imH;
    int scribW, scribH;
+   int gtW, gtH;
    int i;
    clock_t beg,end;
    
@@ -72,6 +83,10 @@ int main(int argc, char* argv[])
          scribW, scribH, imW, imH
       );
       exit(1);
+   }
+   if( argc > 3 )
+   {
+      alphaGt = pgmread_float( argv[3], &gtW, &gtH );
    }
    
    BandedMatrix L;
@@ -129,7 +144,8 @@ int main(int argc, char* argv[])
    vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
    
    //+++++++++++++++++++++++++++++
-   gradSolve(dAlpha, dL, dB, 100, dAlpha_pad);
+   //gradSolve(dAlpha, dL, dB, 100, dAlpha_pad);
+   cgSolve(dAlpha, dL, dB, dAlpha_pad, 100, 101);
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
@@ -152,6 +168,9 @@ int main(int argc, char* argv[])
    printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
    printf("Image Size: %d x %d\n", imW, imH );
    
+   if(alphaGt)
+      computeError(alpha, alphaGt, imW, imH);
+   
    pgmwrite_float("alpha.pgm", imW, imH, alpha, "", 1);
    
    free(alpha);
@@ -166,9 +185,10 @@ void help()
 {
    fprintf(
       stderr,
-      "Usage: matting <image>.ppm <scribbles>.pgm\n"
+      "Usage: matting <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
       "  image     - An RGB image to matte\n"
       "  scribbles - Scribbles for the matte\n"
+      "  gt        - Ground truth for the matte\n"
    );
    
    exit(0);
@@ -348,4 +368,27 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    vecDeviceFree(Lp, pad);
    vecDeviceFree(p, pad);
    vecDeviceFree(r, pad);
+}
+
+void computeError( float* alpha, float* gtAlpha, int imW, int imH )
+{
+   double ssd;
+   int i, j;
+   
+   for( i = 0; i < imH; ++i )
+   {
+      for( j = 0; j < imW; ++j )
+      {
+         if( alpha[j + i*imW] > 1.0f )
+            ssd += (1.0f-gtAlpha[j+i*imW])*(1.0f-gtAlpha[j+i*imW]);
+         else if( alpha[j + i*imW] < 0.0f )
+            ssd += gtAlpha[j+i*imW] * gtAlpha[j+i*imW];
+         else
+            ssd += (alpha[j+i*imW]-gtAlpha[j+i*imW])*(alpha[j+i*imW]-gtAlpha[j+i*imW]);
+      }
+   }
+   
+   ssd /= imW*imH;
+   
+   printf("Ground truth SSD: %.3e\n", ssd);
 }

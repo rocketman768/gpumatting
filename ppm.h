@@ -88,6 +88,28 @@ unsigned char* pgmread(char* filename, int* w, int* h)
 }
 
 /*!
+ * \brief Read a normalized grayscale floating-point image.
+ * 
+ * \sa pgmread()
+ */
+float* pgmread_float(char* filename, int* w, int* h )
+{
+   int i, numpix;
+   unsigned char* cdata;
+   float* fdata;
+   
+   cdata = pgmread(filename, w, h);
+   numpix = (*w)*(*h);
+   fdata = (float*)malloc( numpix*sizeof(float) );
+   
+   for( i = 0; i < numpix; ++i )
+      fdata[i] = static_cast<float>(cdata[i])/255.0f;
+   
+   free(cdata);
+   return fdata;
+}
+
+/*!
  * \brief Reads a binary or ascii PPM (rgb image) file.
  * 
  * \param filename The ppm file to read
