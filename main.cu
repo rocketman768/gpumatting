@@ -123,11 +123,9 @@ int main(int argc, char* argv[])
       alpha[i] = 0.5f;
    
    beg = clock();
-   hostLevinLaplacian(L, b, 1e-2, im, scribs, imW, imH, imW);
+   // WARNING: regularization param < 1e-3 seems to make the Laplacian unstable.
+   hostLevinLaplacian(L, b, 1e-3, im, scribs, imW, imH, imW);
    end = clock();
-   //dump1D( b, L.rows );
-   //return 0;
-   //dump2D( L.a, L.nbands, L.rows, L.rows );
    fprintf(stderr,"Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    //------------------------------------------------
    
@@ -307,7 +305,8 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    int N = L.rows;
    float* rTr;
    
-   int innerIter = restartInterval;
+   // This makes the first iteration gradient descent.
+   int innerIter = 0;
    
    vecDeviceMalloc(&r, N, pad, pad);
    vecDeviceMalloc(&p, N, pad, pad);
@@ -317,11 +316,6 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    cudaMalloc((void**)&rTr, 1*sizeof(float));
    
    cudaThreadSynchronize();
-   
-   // r := L*alpha - b
-   bmAxpy_k<17,false><<<16,1024>>>(r, L, alpha, b);
-   // p = -r
-   vecScaleConst_k<<<16,1024>>>(p, r, -1.0f, N);
    
    // Do the conjugate gradient iterations.
    while( iterations-- > 0 )
@@ -359,6 +353,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
       divScalar<<<1,1>>>(k,rTr);
       
       // p = k*p - r;
+      vecScale_k<<<16,1024>>>(kp, p, k, N);
       vecSub_k<<<16,1024>>>( p, kp, r, N );
    }
    
