@@ -347,6 +347,8 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    
    cudaFree(tmp);
    cudaFree(k);
+   vecDeviceFree(kp, 0);
+   vecDeviceFree(Lp, pad);
    vecDeviceFree(p, pad);
    vecDeviceFree(r, pad);
 }
