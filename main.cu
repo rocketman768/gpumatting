@@ -245,9 +245,8 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    // Do the gradient descent iteration.
    while( iterations-- > 0 )
    {
-      // d := 2*L*alpha - b = gradient(alpha'*L*alpha - alpha'*b)
-      vecScaleConst_k<<<16,1024>>>( f, alpha, 2.0f, N );
-      bmAxpy_k<17,false><<<16,1024>>>(d, L, f, b);
+      // d := L*alpha - b
+      bmAxpy_k<17,false><<<16,1024>>>(d, L, alpha, b);
       
       // If the gradient magnitude is small enough, we're done.
       //innerProd(&tmp, d, d, N);
@@ -258,14 +257,12 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
       // e := H*d
       bmAx_k<17><<<16,1024>>>(e, L, d);
       
-      // k -= 2*<e,alpha>
+      // k -= <e,alpha>
       innerProd_k<<<16,1024,1024*sizeof(float)>>>( tmp, e, alpha, N );
-      multScalarConst<<<1,1>>>(tmp, 2.0f);
       subScalar<<<1,1>>>(k,tmp);
       
-      // k /= 2*<e,d>
+      // k /= <e,d>
       innerProd_k<<<16,1024,1024*sizeof(float)>>>( tmp, e, d, N );
-      multScalarConst<<<1,1>>>(tmp, 2.0f);
       divScalar<<<1,1>>>(k, tmp);
       
       // alpha += k*d
