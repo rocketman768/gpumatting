@@ -288,7 +288,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    float* kp;
    float* k;
    int N = L.rows;
-   float* tmp;
+   float* rTr;
    
    int innerIter = restartInterval;
    
@@ -297,7 +297,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    vecDeviceMalloc(&Lp, N, pad, pad);
    vecDeviceMalloc(&kp, N, 0, 0);
    cudaMalloc((void**)&k, 1*sizeof(float));
-   cudaMalloc((void**)&tmp, 1*sizeof(float));
+   cudaMalloc((void**)&rTr, 1*sizeof(float));
    
    cudaThreadSynchronize();
    
@@ -325,9 +325,9 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
       bmAx_k<17><<<16,1024>>>(Lp, L, p);
       
       // k = <r,r>/<p,p>_L
-      innerProd_k<<<16,1024,1024*sizeof(float)>>>(tmp, r, r, N);
+      innerProd_k<<<16,1024,1024*sizeof(float)>>>(rTr, r, r, N);
       innerProd_k<<<16,1024,1024*sizeof(float)>>>(k, p, Lp, N);
-      divScalar2<<<1,1>>>(k,tmp,k);
+      divScalar2<<<1,1>>>(k,rTr,k);
       
       // alpha += k*p
       vecScale_k<<<16,1024>>>(kp, p, k, N);
@@ -339,13 +339,13 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
       
       // k = <r,r>/<r_old,r_old>
       innerProd_k<<<16,1024,1024*sizeof(float)>>>(k, r, r, N);
-      divScalar<<<1,1>>>(k,tmp);
+      divScalar<<<1,1>>>(k,rTr);
       
       // p = k*p - r;
       vecSub_k<<<16,1024>>>( p, kp, r, N );
    }
    
-   cudaFree(tmp);
+   cudaFree(rTr);
    cudaFree(k);
    vecDeviceFree(kp, 0);
    vecDeviceFree(Lp, pad);
