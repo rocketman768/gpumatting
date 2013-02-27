@@ -40,7 +40,7 @@
  * \param spatialConsistency higher means segments are more spatially smooth and regular.
  * \returns the number of segments produced
  */
-int slicSegmentation( unsigned int* labels, const unsigned int in, int width, int height, int nseg, double spatialConsistency = 10.0 )
+int slicSegmentation( int* labels, const unsigned int* in, int width, int height, int nseg, double spatialConsistency = 10.0 );
 
 class SLIC  
 {

@@ -29,13 +29,13 @@ const int dx10[10] = {-1,  0,  1,  0, -1,  1,  1, -1,  0, 0};
 const int dy10[10] = { 0, -1,  0,  1, -1, -1,  1,  1,  0, 0};
 const int dz10[10] = { 0,  0,  0,  0,  0,  0,  0,  0, -1, 1};
 
-int slicSegmentation( unsigned int* labels, const unsigned int in, int width, int height, int nseg, double spatialConsistency )
+int slicSegmentation( int* labels, const unsigned int* in, int width, int height, int nseg, double spatialConsistency )
 {
    static SLIC slic;
    int actualNseg;
 
    slic.DoSuperpixelSegmentation_ForGivenK(
-      in
+      in,
       width,
       height,
       labels,

@@ -6,6 +6,7 @@
 #include "BandedMatrix.cu"
 #include "Matting.cu"
 #include "Vector.cu"
+#include "SLIC.h"
 
 //! \brief Print help message and exit.
 void help();
@@ -54,8 +55,11 @@ int myceildiv(int a, int b)
 int main(int argc, char* argv[])
 {
    float4* im;
+   unsigned char* charIm;
    float4* dIm;
    unsigned char* scribs;
+   int* labels;
+   unsigned int numLabels;
    float* b;
    float* dB;
    float* alpha;
@@ -72,7 +76,7 @@ int main(int argc, char* argv[])
       help();
    
    //==================HOST DATA====================
-   im = ppmread_float4( 0, argv[1], &imW, &imH );
+   im = ppmread_float4( &charIm, argv[1], &imW, &imH );
    scribs = pgmread( argv[2], &scribW, &scribH );
    if( scribW != imW || scribH != imH )
    {
@@ -121,6 +125,15 @@ int main(int argc, char* argv[])
    alpha = (float*)malloc(L.rows * sizeof(float));
    for( i = 0; i < L.rows; ++i )
       alpha[i] = 0.5f;
+   
+   labels = (int*)malloc(imW*imH*sizeof(int));
+   beg = clock();
+   // charIm is [r,g,b,a,r,g,b,a...], but slic wants [a,r,g,b,a,r,g,b,...], so shift the
+   // charIm by 1 to appease it.
+   // WARNING: this may cause a segfault since it can result in a bad dereference.
+   numLabels = slicSegmentation( labels, (unsigned int*)(charIm-1), imW, imH, 100, 10.0 );
+   end = clock();
+   fprintf(stderr,"SLIC segmentation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    
    beg = clock();
    // WARNING: regularization param < 1e-3 seems to make the Laplacian unstable.
@@ -175,7 +188,10 @@ int main(int argc, char* argv[])
    free(b);
    free(L.a);
    free(L.bands);
+   free(labels);
+   free(scribs);
    free(im);
+   free(charIm);
    return 0;
 }
 
