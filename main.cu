@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
       help();
    
    //==================HOST DATA====================
-   im = ppmread_float4( argv[1], &imW, &imH );
+   im = ppmread_float4( 0, argv[1], &imW, &imH );
    scribs = pgmread( argv[2], &scribW, &scribH );
    if( scribW != imW || scribH != imH )
    {

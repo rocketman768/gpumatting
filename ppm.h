@@ -226,9 +226,10 @@ float* ppmread_float(char* filename, int* w, int* h )
 /*!
  * \brief Read normalized RGBA float4 image.
  *
+ * \param outcdata if nonzero, stores the underlying character data here.
  * \sa ppmread()
  */
-float4* ppmread_float4(char* filename, int* w, int* h )
+float4* ppmread_float4(unsigned char** outcdata, char* filename, int* w, int* h )
 {
    int maxval;
    int i, numpix;
@@ -247,7 +248,10 @@ float4* ppmread_float4(char* filename, int* w, int* h )
       fdata[i].w = 1.0f;
    }
    
-   free(cdata);
+   if( outcdata != 0 )
+      *outcdata = cdata;
+   else
+      free(cdata);
    return fdata;
 }
 
