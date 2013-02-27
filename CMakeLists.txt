@@ -37,6 +37,15 @@ CUDA_BUILD_CLEAN_TARGET()
 
 #===========Set release/debug settings==========
 
+# OpenMP
+IF( CMAKE_COMPILER_IS_GNUCXX )
+   SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp" )
+   SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp" )
+ELSEIF( MSVC )
+   SET( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /openmp" )
+   SET( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /openmp" )
+ENDIF()
+
 IF( CMAKE_COMPILER_IS_GNUCXX )
    SET( CMAKE_CXX_FLAGS_DEBUG "-g3 -Wall -Wno-sign-compare" )
    SET( LINK_FLAGS_DEBUG "-rdynamic" )
