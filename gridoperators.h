@@ -64,23 +64,8 @@ void downsampleOps(..., float const* im, int imW, int imH, int const* labels, in
             tmp = (means[3*u+2]-means[3*v+2]);
             tmp *= tmp;
             diffs[v + u * nlabels] += tmp;
-            
-            // Get location of minimum difference.
-            if( diffs[v + u * nlabels] < min )
-            {
-               min = diffs[v + u * nlabels]
-               minU = u;
-               minV = v;
-            }
          }
       }
-      
-      merged[minU] = 1;
-      merged[minV] = 1;
-      mapping[minU] = curLabel;
-      mapping[minV] = curLabel;
-      
-      ++curLabel;
       
       while( true )
       {
@@ -94,7 +79,8 @@ void downsampleOps(..., float const* im, int imW, int imH, int const* labels, in
             {
                if( merged[v] )
                   continue;
-               
+               // NOTE: need to check here that segments u and v are spatially adjacent.
+                  
                // Get location of minimum difference.
                if( diffs[v + u * nlabels] < min )
                {
