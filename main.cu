@@ -172,8 +172,8 @@ int main(int argc, char* argv[])
    vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
    
    //+++++++++++++++++++++++++++++
-   //gradSolve(dAlpha, dL, dB, 100, dAlpha_pad);
-   cgSolve(dAlpha, dL, dB, dAlpha_pad, 100, 101);
+   gradSolve(dAlpha, dL, dB, 10, dAlpha_pad);
+   //cgSolve(dAlpha, dL, dB, dAlpha_pad, 100, 101);
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );

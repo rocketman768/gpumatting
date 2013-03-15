@@ -82,10 +82,9 @@ __device__ void bmAx( float* b, const BandedMatrix a, float const* x )
          
          b[i] = bi;
       }
-      
-      if( __any(i >= a.rows) )
+      else
          break;
-
+      
       i += nthreads;
    }
 }
@@ -131,8 +130,7 @@ __device__ void bmAxpy( float* b, const BandedMatrix a, float const* x, float co
          else
             b[i] = bi - y[i];
       }
-      
-      if( __any(i >= a.rows) )
+      else
          break;
 
       i += nthreads;
