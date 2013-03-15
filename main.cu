@@ -163,6 +163,7 @@ int main(int argc, char* argv[])
    dAlpha_pad = ((2*imW+2)/32)*32+32;
    
    //=================GPU Time=======================
+   cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
    BandedMatrix dL;
    bmCopyToDevice( &dL, &L );
    
