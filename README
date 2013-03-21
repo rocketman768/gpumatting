@@ -21,4 +21,6 @@ This is a cmake project.
 
 You will find the computed alpha matte in alpha.pgm in the working directory.
 You can find more example data at http://www.alphamatting.com/datasets.php
+The explanation of the options and parameters is given if you run without any
+arguments.
 
