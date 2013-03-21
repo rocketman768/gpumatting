@@ -47,7 +47,11 @@ unsigned char* pgmread(char* filename, int* w, int* h)
        *h = *w = 0;
        return(NULL);
     }
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     if (strncmp(line,"P5", 2))
     {
        if (strncmp(line,"P2", 2))
@@ -62,12 +66,26 @@ unsigned char* pgmread(char* filename, int* w, int* h)
     else 
        binary = 1;
 
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     while (line[0] == '#')
-       fgets(line, 256, file);
+    {
+       if( fgets(line, 256, file) != line )
+       {
+          fprintf(stderr, "ERROR: something wrong with the file.\n");
+          return NULL;
+       }
+    }
 
     sscanf(line,"%d %d", w, h);
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     sscanf(line, "%d", &maxval);
     
     numpix = (*w)*(*h);
@@ -94,7 +112,11 @@ unsigned char* pgmread(char* filename, int* w, int* h)
        {
           for (j = 0; j < (*w); j++)
           {
-             fscanf(file, "%d", &int_tmp);
+             if( fscanf(file, "%d", &int_tmp) != 1 )
+             {
+                fprintf(stderr, "ERROR: Something wrong with the file.\n");
+                exit(1);
+             }
              data[k++] = (unsigned char)int_tmp;
           }  
        }
@@ -154,7 +176,11 @@ unsigned char* ppmread(char* filename, int* w, int* h, int* maxval)
        *h = *w = 0;
        return(NULL);
     }
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     if (strncmp(line,"P6", 2))
     {
        if (strncmp(line,"P3", 2))
@@ -169,12 +195,26 @@ unsigned char* ppmread(char* filename, int* w, int* h, int* maxval)
     else 
        binary = 1;
 
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     while (line[0] == '#')
-       fgets(line, 256, file);
+    {
+       if( fgets(line, 256, file) != line )
+       {
+          fprintf(stderr, "ERROR: something wrong with the file.\n");
+          return NULL;
+       }
+    }
 
     sscanf(line,"%d %d", w, h);
-    fgets(line, 256, file);
+    if( fgets(line, 256, file) != line )
+    {
+       fprintf(stderr, "ERROR: something wrong with the file.\n");
+       return NULL;
+    }
     sscanf(line, "%d", maxval);
     
     if( *maxval < 0 || *maxval > 255 )
@@ -207,7 +247,11 @@ unsigned char* ppmread(char* filename, int* w, int* h, int* maxval)
        {
           for (j = 0; j < (*w)*3; j++)
           {
-             fscanf(file, "%d", &int_tmp);
+             if( fscanf(file, "%d", &int_tmp) != 1 )
+             {
+                fprintf(stderr, "ERROR: Something wrong with the file.\n");
+                exit(1);
+             }
              data[k++] = (unsigned char)int_tmp;
           }  
        }

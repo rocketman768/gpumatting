@@ -126,7 +126,7 @@ __device__ void vecAdd( float* result, float const* x, float const* y, int len )
 {
    int nthreads = blockDim.x*gridDim.x;
    int i = blockDim.x * blockIdx.x + threadIdx.x;
-   int ti = threadIdx.x;
+   //int ti = threadIdx.x;
    
    while( i < len )
    {
@@ -163,7 +163,7 @@ __device__ void vecScale( float* result, float const* x, float s, int len )
 {
    int nthreads = blockDim.x*gridDim.x;
    int i = blockDim.x * blockIdx.x + threadIdx.x;
-   int ti = threadIdx.x;
+   //int ti = threadIdx.x;
    
    while( i < len )
    {

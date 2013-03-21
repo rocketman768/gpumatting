@@ -244,7 +244,7 @@ __global__ void levinLaplacian(
    int imW, int imH, size_t imPitch
 )
 {
-   const float gamma = 1e1;
+   //const float gamma = 1e1;
    const int winRad = 1;
    const float winSize = (2*winRad+1)*(2*winRad+1);
    

@@ -75,10 +75,9 @@ int main(int argc, char* argv[])
    Solver solver = SOLVER_CG;
    float4* im;
    unsigned char* charIm;
-   float4* dIm;
    unsigned char* scribs;
    int* labels;
-   unsigned int numLabels;
+   //unsigned int numLabels;
    float* b;
    float* dB;
    float* alpha;
@@ -156,9 +155,9 @@ int main(int argc, char* argv[])
    // charIm is [r,g,b,a,r,g,b,a...], but slic wants [a,r,g,b,a,r,g,b,...], so shift the
    // charIm by 1 to appease it.
    // WARNING: this may cause a segfault since it can result in a bad dereference.
-   numLabels = slicSegmentation( labels, (unsigned int*)(charIm-1), imW, imH, 100, 10.0 );
-   end = clock();
-   fprintf(stderr,"SLIC segmentation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
+   //numLabels = slicSegmentation( labels, (unsigned int*)(charIm-1), imW, imH, 100, 10.0 );
+   //end = clock();
+   //fprintf(stderr,"SLIC segmentation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
    
    beg = clock();
    // WARNING: regularization param < 1e-3 seems to make the Laplacian unstable.
@@ -303,8 +302,6 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    int N = L.rows;
    float* tmp;
    
-   float kDebug;
-   
    vecDeviceMalloc(&d, N, pad, pad);
    cudaMalloc((void**)&e, N*sizeof(float));
    vecDeviceMalloc(&f, N, pad, pad);
@@ -420,7 +417,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
 
 void computeError( float* alpha, float* gtAlpha, int imW, int imH )
 {
-   double ssd;
+   double ssd = 0.0;
    int i, j;
    
    for( i = 0; i < imH; ++i )
