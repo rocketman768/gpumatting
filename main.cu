@@ -71,6 +71,8 @@ int myceildiv(int a, int b)
 
 int main(int argc, char* argv[])
 {
+   enum Solver{SOLVER_GRAD, SOLVER_CG};
+   Solver solver = SOLVER_CG;
    float4* im;
    unsigned char* charIm;
    float4* dIm;
@@ -87,14 +89,22 @@ int main(int argc, char* argv[])
    int scribW, scribH;
    int gtW, gtH;
    int i;
+   int iterations;
    clock_t beg,end;
    
-   if( argc < 3 )
+   if( argc < 5 )
       help();
    
    //==================HOST DATA====================
-   im = ppmread_float4( &charIm, argv[1], &imW, &imH );
-   scribs = pgmread( argv[2], &scribW, &scribH );
+      
+   // Parse the options.
+   if( strncmp(argv[1],"grad",4)==0 )
+      solver = SOLVER_GRAD;
+   else
+      solver = SOLVER_CG;
+   iterations = atoi(argv[2]);
+   im = ppmread_float4( &charIm, argv[3], &imW, &imH );
+   scribs = pgmread( argv[4], &scribW, &scribH );
    if( scribW != imW || scribH != imH )
    {
       fprintf(
@@ -105,10 +115,8 @@ int main(int argc, char* argv[])
       );
       exit(1);
    }
-   if( argc > 3 )
-   {
-      alphaGt = pgmread_float( argv[3], &gtW, &gtH );
-   }
+   if( argc > 5 )
+      alphaGt = pgmread_float( argv[5], &gtW, &gtH );
    
    BandedMatrix L;
    L.rows = imW*imH;
@@ -173,8 +181,17 @@ int main(int argc, char* argv[])
    vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
    
    //+++++++++++++++++++++++++++++
-   gradSolve(dAlpha, dL, dB, 10, dAlpha_pad);
-   //cgSolve(dAlpha, dL, dB, dAlpha_pad, 100, 101);
+   switch( solver )
+   {
+      case SOLVER_GRAD:
+         gradSolve(dAlpha, dL, dB, iterations, dAlpha_pad);
+         break;
+      case SOLVER_CG:
+         cgSolve(dAlpha, dL, dB, dAlpha_pad, iterations, 101);
+         break;
+      default:
+         break;
+   }
    //+++++++++++++++++++++++++++++
    
    cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
@@ -217,7 +234,9 @@ void help()
 {
    fprintf(
       stderr,
-      "Usage: matting <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
+      "Usage: matting <solver> <iter> <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
+      "  solver    - Either \"grad\" or \"cg\" for gradient/conjugate-gradient\n"
+      "  iter      - Number of iterations for the solver\n"
       "  image     - An RGB image to matte\n"
       "  scribbles - Scribbles for the matte\n"
       "  gt        - Ground truth for the matte\n"
