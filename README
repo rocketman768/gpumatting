@@ -20,4 +20,5 @@ This is a cmake project.
     ./bin/matting cg 1000 ../gpumatting/data/05.ppm ../gpumatting/data/05_scribs.pgm ../gpumatting/data/05_gt.pgm
 
 You will find the computed alpha matte in alpha.pgm in the working directory.
+You can find more example data at http://www.alphamatting.com/datasets.php
 
