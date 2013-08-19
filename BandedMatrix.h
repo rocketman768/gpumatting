@@ -18,6 +18,8 @@
 #ifndef BANDEDMATRIX_H
 #define BANDEDMATRIX_H
 
+#include <stddef.h>
+
 typedef struct BandedMatrix_s
 {
    // The band data, organized in a nbands x rows dense
