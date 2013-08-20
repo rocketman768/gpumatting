@@ -61,6 +61,24 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
  * \param imH Matte height
  */
 void computeError( float* alpha, float* gtAlpha, int imW, int imH );
+/*!
+ * \brief Jacobi relaxation
+ * 
+ * \param x Device pointer for result
+ * \param a Matrix
+ * \param b Right-hand-side
+ * \param omega Damping coefficient.
+ * \param pad padding of \c x
+ * \param iterations Number of smoothings to do.
+ */
+void jacobi(
+   float* x,
+   const BandedMatrix a,
+   float const* b,
+   float omega,
+   int pad,
+   int iterations
+);
 
 int myceildiv(int a, int b)
 {
@@ -413,6 +431,36 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    vecDeviceFree(Lp, pad);
    vecDeviceFree(p, pad);
    vecDeviceFree(r, pad);
+}
+
+void jacobi(
+   float* x,
+   const BandedMatrix a,
+   float const* b,
+   float omega,
+   int pad,
+   int iterations
+)
+{
+   float* xx;
+   float* xxTmp;
+   float* xxOrig;
+   
+   vecDeviceMalloc(&xxOrig, a.rows, pad, pad);
+   cudaDeviceSynchronize();
+   xx = xxOrig;
+   
+   while( iterations-- > 0 )
+   {
+      jacobi_k<17><<<16,1024>>>(xx, x, a, b, omega);
+      
+      // Swap x and xx
+      xxTmp = x;
+      x = xx;
+      xx = xxTmp;
+   }
+   
+   vecDeviceFree(xxOrig, pad);
 }
 
 void computeError( float* alpha, float* gtAlpha, int imW, int imH )
