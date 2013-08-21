@@ -481,7 +481,5 @@ void computeError( float* alpha, float* gtAlpha, int imW, int imH )
       }
    }
    
-   ssd /= imW*imH;
-   
-   printf("Ground truth SSD: %.3e\n", ssd);
+   printf("Ground truth MSE: %.3e\n", ssd/(imW*imH));
 }
