@@ -35,7 +35,7 @@ void bmCopyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
       hA->nbands,                // Source height
       cudaMemcpyHostToDevice
    );
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    dA->apitch /= sizeof(float); // Want the pitch to be in float indices rather than bytes.
    cudaMemcpy( (void*)(dA->bands), (void*)(hA->bands), hA->nbands * sizeof(int), cudaMemcpyHostToDevice );
 }

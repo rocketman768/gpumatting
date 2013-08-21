@@ -23,7 +23,7 @@
 void vecDeviceMalloc(float** dx, int length, int leftPadding=0, int rightPadding=0)
 {
    cudaMalloc((void**)dx, sizeof(float)*(length+leftPadding+rightPadding));
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    cudaMemset((void*)*dx, 0x00, sizeof(float)*(length+leftPadding+rightPadding));
    if( leftPadding )
       *dx += leftPadding;

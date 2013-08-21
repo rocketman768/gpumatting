@@ -217,7 +217,7 @@ int main(int argc, char* argv[])
    cudaFree(dB);
    bmDeviceFree( &dL );
    
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    //------------------------------------------------
    
    // Print any errors
@@ -326,7 +326,7 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    cudaMalloc((void**)&k, 1*sizeof(float));
    cudaMalloc((void**)&tmp, 1*sizeof(float));
    
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    
    // Do the gradient descent iteration.
    while( iterations-- > 0 )
@@ -383,7 +383,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    cudaMalloc((void**)&k, 1*sizeof(float));
    cudaMalloc((void**)&rTr, 1*sizeof(float));
    
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    
    // Do the conjugate gradient iterations.
    while( iterations-- > 0 )

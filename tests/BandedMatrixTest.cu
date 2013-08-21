@@ -63,7 +63,7 @@ int main()
    
    //++++++++++++++++++++++++++Kernel Invocation+++++++++++++++++++++++++++++++
    cudaMalloc( (void**)&dx, (N+10+10)*sizeof(float) );
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    dx += 10;
    cudaMemcpy( (void*)dx, (void*)hx, N*sizeof(float), cudaMemcpyHostToDevice );
 
@@ -79,7 +79,7 @@ int main()
    cudaFree( dx - 10 );
  
    // Wait for GPU to finish all that shit.
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    //--------------------------------------------------------------------------
    
    
