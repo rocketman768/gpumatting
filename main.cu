@@ -24,6 +24,7 @@
 #include "Matting.cu"
 #include "Vector.cu"
 #include "SLIC.h"
+#include "Solve.h"
 
 //! \brief Print help message and exit.
 void help();
@@ -80,6 +81,19 @@ void jacobi(
    int iterations
 );
 
+float* vector_host(size_t n, size_t padding)
+{
+   float* ret = new float[n+2*padding];
+   ret += padding;
+   return ret;
+}
+
+void free_vector_host(float* vec, size_t padding)
+{
+   vec -= padding;
+   delete[] vec;
+}
+
 int myceildiv(int a, int b)
 {
    if( a % b != 0 )
@@ -89,7 +103,7 @@ int myceildiv(int a, int b)
 
 int main(int argc, char* argv[])
 {
-   enum Solver{SOLVER_GRAD, SOLVER_CG};
+   enum Solver{SOLVER_GRAD, SOLVER_CG, SOLVER_JACOBI_HOST};
    Solver solver = SOLVER_CG;
    float4* im;
    unsigned char* charIm;
@@ -99,6 +113,7 @@ int main(int argc, char* argv[])
    float* b;
    float* dB;
    float* alpha;
+   float* alphaPad;
    float* dAlpha;
    int dAlpha_pad;
    float* alphaGt = 0;
@@ -108,6 +123,7 @@ int main(int argc, char* argv[])
    int i;
    int iterations;
    clock_t beg,end;
+   BandedMatrix L, dL;
    
    if( argc < 5 )
       help();
@@ -117,8 +133,10 @@ int main(int argc, char* argv[])
    // Parse the options.
    if( strncmp(argv[1],"grad",4)==0 )
       solver = SOLVER_GRAD;
-   else
+   else if( strncmp(argv[1],"cg",2) == 0 )
       solver = SOLVER_CG;
+   else
+      solver = SOLVER_JACOBI_HOST;
    iterations = atoi(argv[2]);
    im = ppmread_float4( &charIm, argv[3], &imW, &imH );
    scribs = pgmread( argv[4], &scribW, &scribH );
@@ -135,7 +153,6 @@ int main(int argc, char* argv[])
    if( argc > 5 )
       alphaGt = pgmread_float( argv[5], &gtW, &gtH );
    
-   BandedMatrix L;
    L.rows = imW*imH;
    L.cols = L.rows;
    // Setup bands===
@@ -187,37 +204,61 @@ int main(int argc, char* argv[])
    // Pad alpha by a multiple of 32 that is larger than (2*imW+2).
    dAlpha_pad = ((2*imW+2)/32)*32+32;
    
+   bool cpuSolver = solver == SOLVER_JACOBI_HOST;
+   
    //=================GPU Time=======================
-   cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
-   BandedMatrix dL;
-   bmCopyToDevice( &dL, &L );
    
-   cudaMalloc((void**)&dB, L.rows*sizeof(float));
-   cudaMemcpy((void*)dB, (void*)b, L.rows*sizeof(float), cudaMemcpyHostToDevice);
-   
-   vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
+   // Pre-solve
+   if( cpuSolver )
+   {
+      alphaPad = vector_host(imW*imH, dAlpha_pad);
+      memcpy( alphaPad, alpha, imW*imH*sizeof(float) );
+   }
+   else
+   {
+      cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+      bmCopyToDevice( &dL, &L );
+      
+      cudaMalloc((void**)&dB, L.rows*sizeof(float));
+      cudaMemcpy((void*)dB, (void*)b, L.rows*sizeof(float), cudaMemcpyHostToDevice);
+      
+      vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
+   }
    
    //+++++++++++++++++++++++++++++
    switch( solver )
    {
       case SOLVER_GRAD:
          gradSolve(dAlpha, dL, dB, iterations, dAlpha_pad);
+         cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
          break;
       case SOLVER_CG:
          cgSolve(dAlpha, dL, dB, dAlpha_pad, iterations, 101);
+         cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
+         break;
+      case SOLVER_JACOBI_HOST:
+         jacobi_host( alphaPad, L, b, iterations, dAlpha_pad, 2.f/3.f );
          break;
       default:
          break;
    }
    //+++++++++++++++++++++++++++++
    
-   cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
-   
-   vecDeviceFree( dAlpha, dAlpha_pad );
-   cudaFree(dB);
-   bmDeviceFree( &dL );
-   
-   cudaDeviceSynchronize();
+   // Post-solve
+   if( cpuSolver )
+   {
+      memcpy( alpha, alphaPad, imW*imH*sizeof(float) );
+      free_vector_host( alphaPad, dAlpha_pad );
+   }
+   else
+   {
+      cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
+      
+      vecDeviceFree( dAlpha, dAlpha_pad );
+      cudaFree(dB);
+      bmDeviceFree( &dL );
+      cudaDeviceSynchronize();
+   }
    //------------------------------------------------
    
    // Print any errors
@@ -227,8 +268,8 @@ int main(int argc, char* argv[])
       fprintf(stderr, "ERROR: %s\n", error_str);
    
    // Print some stats
-   printf("Pitch: %lu, %lu\n", L.apitch, dL.apitch);
-   printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
+   //printf("Pitch: %lu, %lu\n", L.apitch, dL.apitch);
+   //printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
    printf("Image Size: %d x %d\n", imW, imH );
    
    if(alphaGt)
@@ -252,7 +293,8 @@ void help()
    fprintf(
       stderr,
       "Usage: matting <solver> <iter> <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
-      "  solver    - Either \"grad\" or \"cg\" for gradient/conjugate-gradient\n"
+      "  solver    - \"grad\" (gradient), \"cg\" (conjugate-gradient),\n"
+      "              \"cpu-jacobi\" (CPU Jacobi iteration)\n"
       "  iter      - Number of iterations for the solver\n"
       "  image     - An RGB image to matte\n"
       "  scribbles - Scribbles for the matte\n"

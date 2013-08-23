@@ -32,7 +32,7 @@ void gaussSeidel_host( float* x, BandedMatrix const& A, float const* b, size_t i
    delete[] jbandOff;
 }
 
-void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterations, float omega )
+void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterations, int xpad, float omega )
 {
    int i,jband;
    float tmp;
@@ -43,7 +43,8 @@ void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterat
    int midBand = A.nbands/2;
    
    // WARNING: this needs padding so that xx[i+bands[jband]] is always ok.
-   float* xx = new float[A.rows];
+   float* xx = new float[A.rows + 2*xpad];
+   xx += xpad;
    //float* xx = new float[A.rows + 4000];
    //xx += 2000;
    float* swapper;
@@ -78,6 +79,7 @@ void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterat
    // result of the very last iteration on returning.
    
    //xx -= 2000;
+   xx -= xpad;
    delete[] xx;
    delete[] jbandOff;
 }

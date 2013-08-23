@@ -28,6 +28,6 @@ void gaussSeidel_host( float* x, BandedMatrix const& A, float const* b, size_t i
  * \param omega Damping ratio (in [0,1]). Default is 2/3 (typical choice).
  *        1 means no damping, 0 means infinite.
  */
-void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterations=1, float omega=2.f/3.f );
+void jacobi_host( float* x, BandedMatrix const& A, float const* b, size_t iterations, int xpad, float omega=2.f/3.f );
 
 #endif /*SOLVE_H*/
