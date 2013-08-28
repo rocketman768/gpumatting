@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
    unsigned char* charIm;
    unsigned char* scribs;
    int* labels;
-   //unsigned int numLabels;
+   unsigned int numLabels;
    float* b;
    float* dB;
    float* alpha;
@@ -150,14 +150,24 @@ int main(int argc, char* argv[])
    for( i = 0; i < L.rows; ++i )
       alpha[i] = 0.5f;
    
-   labels = (int*)malloc(imW*imH*sizeof(int));
-   beg = clock();
-   // charIm is [r,g,b,a,r,g,b,a...], but slic wants [a,r,g,b,a,r,g,b,...], so shift the
-   // charIm by 1 to appease it.
-   // WARNING: this may cause a segfault since it can result in a bad dereference.
-   //numLabels = slicSegmentation( labels, (unsigned int*)(charIm-1), imW, imH, 100, 10.0 );
+   // SLIC
+   //labels = (int*)malloc(imW*imH*sizeof(int));
+   //beg = clock();
+   //unsigned char* imArgb = rgbToArgb(charIm, imW, imH);
+   //numLabels = slicSegmentation( labels, (unsigned int*)imArgb, imW, imH, 200, 10.0 );
    //end = clock();
+   //fprintf(stderr, "numlabels: %d\n", numLabels);
    //fprintf(stderr,"SLIC segmentation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
+   // Dump to screen
+   //for( int v = 0; v < imH; ++v )
+   //{
+   //   for( int u = 0; u < imW; ++u )
+   //      printf("%d, ", labels[u+v*imW]);
+   //   printf("\n");
+   //}
+   //free(imArgb);
+   //return 0;
+   // END SLIC
    
    beg = clock();
    // WARNING: regularization param < 1e-3 seems to make the Laplacian unstable.

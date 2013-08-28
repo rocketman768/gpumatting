@@ -148,6 +148,22 @@ float* pgmread_float(char* filename, int* w, int* h )
    return fdata;
 }
 
+unsigned char* rgbToArgb(unsigned char* rgb, int w, int h)
+{
+   int j,k;
+   unsigned char* ret = (unsigned char*)malloc(4*w*h);
+   
+   for( k=0,j=0; k < 4*w*h; ++k )
+   {
+      if( k%4 == 0 )
+         ret[k] = 0xff;
+      else
+         ret[k] = rgb[j++];
+   }
+   
+   return ret;
+}
+
 /*!
  * \brief Reads a binary or ascii PPM (rgb image) file.
  * 
@@ -156,7 +172,7 @@ float* pgmread_float(char* filename, int* w, int* h )
  * \param h Output height
  * \param maxval Output maximum value.
  * \returns a pointer to the image in row-major RGB format. The calling
- *          function has responsibility to free the memory. A NULL is returned
+ *          function has responsibility to free() the memory. A NULL is returned
  *          in the case of failure.
  */
 unsigned char* ppmread(char* filename, int* w, int* h, int* maxval)
