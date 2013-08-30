@@ -103,7 +103,7 @@ int myceildiv(int a, int b)
 
 int main(int argc, char* argv[])
 {
-   enum Solver{SOLVER_GRAD, SOLVER_CG, SOLVER_JACOBI_HOST};
+   enum Solver{SOLVER_GRAD, SOLVER_CG, SOLVER_JACOBI_HOST, SOLVER_GS_HOST};
    Solver solver = SOLVER_CG;
    float4* im;
    unsigned char* charIm;
@@ -135,8 +135,11 @@ int main(int argc, char* argv[])
       solver = SOLVER_GRAD;
    else if( strncmp(argv[1],"cg",2) == 0 )
       solver = SOLVER_CG;
-   else
+   else if( strncmp(argv[1],"cpu-jacobi",10) == 0 )
       solver = SOLVER_JACOBI_HOST;
+   else
+      solver = SOLVER_GS_HOST;
+   
    iterations = atoi(argv[2]);
    im = ppmread_float4( &charIm, argv[3], &imW, &imH );
    scribs = pgmread( argv[4], &scribW, &scribH );
@@ -204,7 +207,7 @@ int main(int argc, char* argv[])
    // Pad alpha by a multiple of 32 that is larger than (2*imW+2).
    dAlpha_pad = ((2*imW+2)/32)*32+32;
    
-   bool cpuSolver = solver == SOLVER_JACOBI_HOST;
+   bool cpuSolver = (solver == SOLVER_JACOBI_HOST || solver == SOLVER_GS_HOST);
    
    //=================GPU Time=======================
    
@@ -238,6 +241,9 @@ int main(int argc, char* argv[])
          break;
       case SOLVER_JACOBI_HOST:
          jacobi_host( alphaPad, L, b, iterations, dAlpha_pad, 2.f/3.f );
+         break;
+      case SOLVER_GS_HOST:
+         gaussSeidel_host( alphaPad, L, b, iterations );
          break;
       default:
          break;
@@ -294,7 +300,7 @@ void help()
       stderr,
       "Usage: matting <solver> <iter> <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
       "  solver    - \"grad\" (gradient), \"cg\" (conjugate-gradient),\n"
-      "              \"cpu-jacobi\" (CPU Jacobi iteration)\n"
+      "              \"cpu-jacobi\" (CPU Jacobi iteration), \"cpu-gauss-seidel\"\n"
       "  iter      - Number of iterations for the solver\n"
       "  image     - An RGB image to matte\n"
       "  scribbles - Scribbles for the matte\n"
