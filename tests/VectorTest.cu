@@ -53,7 +53,7 @@ int main()
    cudaFree( dx );
    
    // Wait for GPU to finish all that shit.
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    
    if( fabs(hresult-2e6) < 1e-5 )
       printf("Test PASSED\n");

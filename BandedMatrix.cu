@@ -35,7 +35,7 @@ void bmCopyToDevice( BandedMatrix* dA, BandedMatrix const* hA )
       hA->nbands,                // Source height
       cudaMemcpyHostToDevice
    );
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    dA->apitch /= sizeof(float); // Want the pitch to be in float indices rather than bytes.
    cudaMemcpy( (void*)(dA->bands), (void*)(hA->bands), hA->nbands * sizeof(int), cudaMemcpyHostToDevice );
 }
@@ -44,6 +44,57 @@ void bmDeviceFree( BandedMatrix* dA )
 {
    cudaFree( dA->bands );
    cudaFree( dA->a );
+}
+
+/*!
+ * \brief Damped Jacobi iteration.
+ * 
+ * Does a single damped Jacobi iteration.
+ * 
+ * \param xx Output of the iteration.
+ * \param x Input point of the iteration.
+ * \param a Matrix
+ * \param b Right-hand side
+ * \param omega Damping ratio. 1 means no damping, and 0 means infinite
+ *        damping. Usually, 2/3 is used.
+ */
+template<int nbands>
+__global__ void jacobi_k(
+   float* xx,
+   float const* x,
+   const BandedMatrix a,
+   float const* b,
+   float omega
+)
+{
+   __shared__ int sdata[nbands];
+   
+   int nthreads = blockDim.x*gridDim.x;
+   int i = blockIdx.x*blockDim.x + threadIdx.x;
+   int j;
+   float bi;
+   
+   // Make the shared data store the band offsets.
+   if( threadIdx.x < nbands )
+      sdata[threadIdx.x] = a.bands[threadIdx.x];
+   __syncthreads();
+   
+   while( true )
+   {
+      bi = b[i];
+      if( i < a.rows )
+      {
+         for( j = 0; j < nbands; ++j )
+            bi -= a.a[i+j*a.apitch] * x[i+sdata[j]];
+         
+         bi = x[i] + bi/a.a[i+(nbands/2)*a.apitch];
+         xx[i] = omega*bi + (1.f-omega)*x[i];
+      }
+      else
+         break;
+      
+      i += nthreads;
+   }
 }
 
 /*!

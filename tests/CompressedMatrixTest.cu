@@ -93,7 +93,7 @@ int main()
    csmAxpy_k<<<nBlocks, nThreadsPerBlock, nThreadsPerBlock*sizeof(float)>>>(db, da, dx, dy);
    
    // Wait for GPU to finish all that shit.
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
 
    // Copy result vector back.
    cudaMemcpy( (void*)hb, (void const*)db, N*sizeof(float), cudaMemcpyDeviceToHost );

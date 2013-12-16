@@ -66,7 +66,7 @@ ELSE()
 ENDIF()
 
 INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_SOURCE_DIR} )
-CUDA_ADD_EXECUTABLE( matting main.cu SLIC.cpp )
+CUDA_ADD_EXECUTABLE( matting main.cu SLIC.cpp Solve.cpp )
 IF( DO_TESTING )
    ADD_SUBDIRECTORY( "tests/" )
 ENDIF()

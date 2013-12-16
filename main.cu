@@ -24,6 +24,7 @@
 #include "Matting.cu"
 #include "Vector.cu"
 #include "SLIC.h"
+#include "Solve.h"
 
 //! \brief Print help message and exit.
 void help();
@@ -61,6 +62,37 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
  * \param imH Matte height
  */
 void computeError( float* alpha, float* gtAlpha, int imW, int imH );
+/*!
+ * \brief Jacobi relaxation
+ * 
+ * \param x Device pointer for result
+ * \param a Matrix
+ * \param b Right-hand-side
+ * \param omega Damping coefficient.
+ * \param pad padding of \c x
+ * \param iterations Number of smoothings to do.
+ */
+void jacobi(
+   float* x,
+   const BandedMatrix a,
+   float const* b,
+   float omega,
+   int pad,
+   int iterations
+);
+
+float* vector_host(size_t n, size_t padding)
+{
+   float* ret = new float[n+2*padding];
+   ret += padding;
+   return ret;
+}
+
+void free_vector_host(float* vec, size_t padding)
+{
+   vec -= padding;
+   delete[] vec;
+}
 
 int myceildiv(int a, int b)
 {
@@ -71,7 +103,7 @@ int myceildiv(int a, int b)
 
 int main(int argc, char* argv[])
 {
-   enum Solver{SOLVER_GRAD, SOLVER_CG};
+   enum Solver{SOLVER_GRAD, SOLVER_CG, SOLVER_JACOBI_HOST, SOLVER_GS_HOST};
    Solver solver = SOLVER_CG;
    float4* im;
    unsigned char* charIm;
@@ -81,6 +113,7 @@ int main(int argc, char* argv[])
    float* b;
    float* dB;
    float* alpha;
+   float* alphaPad;
    float* dAlpha;
    int dAlpha_pad;
    float* alphaGt = 0;
@@ -90,6 +123,7 @@ int main(int argc, char* argv[])
    int i;
    int iterations;
    clock_t beg,end;
+   BandedMatrix L, dL;
    
    if( argc < 5 )
       help();
@@ -99,8 +133,13 @@ int main(int argc, char* argv[])
    // Parse the options.
    if( strncmp(argv[1],"grad",4)==0 )
       solver = SOLVER_GRAD;
-   else
+   else if( strncmp(argv[1],"cg",2) == 0 )
       solver = SOLVER_CG;
+   else if( strncmp(argv[1],"cpu-jacobi",10) == 0 )
+      solver = SOLVER_JACOBI_HOST;
+   else
+      solver = SOLVER_GS_HOST;
+   
    iterations = atoi(argv[2]);
    im = ppmread_float4( &charIm, argv[3], &imW, &imH );
    scribs = pgmread( argv[4], &scribW, &scribH );
@@ -117,7 +156,6 @@ int main(int argc, char* argv[])
    if( argc > 5 )
       alphaGt = pgmread_float( argv[5], &gtW, &gtH );
    
-   BandedMatrix L;
    L.rows = imW*imH;
    L.cols = L.rows;
    // Setup bands===
@@ -179,37 +217,64 @@ int main(int argc, char* argv[])
    // Pad alpha by a multiple of 32 that is larger than (2*imW+2).
    dAlpha_pad = ((2*imW+2)/32)*32+32;
    
+   bool cpuSolver = (solver == SOLVER_JACOBI_HOST || solver == SOLVER_GS_HOST);
+   
    //=================GPU Time=======================
-   cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
-   BandedMatrix dL;
-   bmCopyToDevice( &dL, &L );
    
-   cudaMalloc((void**)&dB, L.rows*sizeof(float));
-   cudaMemcpy((void*)dB, (void*)b, L.rows*sizeof(float), cudaMemcpyHostToDevice);
-   
-   vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
+   // Pre-solve
+   if( cpuSolver )
+   {
+      alphaPad = vector_host(imW*imH, dAlpha_pad);
+      memcpy( alphaPad, alpha, imW*imH*sizeof(float) );
+   }
+   else
+   {
+      cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
+      bmCopyToDevice( &dL, &L );
+      
+      cudaMalloc((void**)&dB, L.rows*sizeof(float));
+      cudaMemcpy((void*)dB, (void*)b, L.rows*sizeof(float), cudaMemcpyHostToDevice);
+      
+      vecCopyToDevice(&dAlpha, alpha, L.rows, dAlpha_pad, dAlpha_pad);
+   }
    
    //+++++++++++++++++++++++++++++
    switch( solver )
    {
       case SOLVER_GRAD:
          gradSolve(dAlpha, dL, dB, iterations, dAlpha_pad);
+         cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
          break;
       case SOLVER_CG:
          cgSolve(dAlpha, dL, dB, dAlpha_pad, iterations, 101);
+         cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
+         break;
+      case SOLVER_JACOBI_HOST:
+         jacobi_host( alphaPad, L, b, iterations, dAlpha_pad, 2.f/3.f );
+         break;
+      case SOLVER_GS_HOST:
+         gaussSeidel_host( alphaPad, L, b, iterations );
          break;
       default:
          break;
    }
    //+++++++++++++++++++++++++++++
    
-   cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
-   
-   vecDeviceFree( dAlpha, dAlpha_pad );
-   cudaFree(dB);
-   bmDeviceFree( &dL );
-   
-   cudaThreadSynchronize();
+   // Post-solve
+   if( cpuSolver )
+   {
+      memcpy( alpha, alphaPad, imW*imH*sizeof(float) );
+      free_vector_host( alphaPad, dAlpha_pad );
+   }
+   else
+   {
+      cudaMemcpy( (void*)alpha, (void*)dAlpha, L.rows*sizeof(float), cudaMemcpyDeviceToHost );
+      
+      vecDeviceFree( dAlpha, dAlpha_pad );
+      cudaFree(dB);
+      bmDeviceFree( &dL );
+      cudaDeviceSynchronize();
+   }
    //------------------------------------------------
    
    // Print any errors
@@ -219,8 +284,8 @@ int main(int argc, char* argv[])
       fprintf(stderr, "ERROR: %s\n", error_str);
    
    // Print some stats
-   printf("Pitch: %lu, %lu\n", L.apitch, dL.apitch);
-   printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
+   //printf("Pitch: %lu, %lu\n", L.apitch, dL.apitch);
+   //printf("rows, nbands: %d, %d\n", dL.rows, dL.nbands);
    printf("Image Size: %d x %d\n", imW, imH );
    
    if(alphaGt)
@@ -244,7 +309,8 @@ void help()
    fprintf(
       stderr,
       "Usage: matting <solver> <iter> <image>.ppm <scribbles>.pgm [<gt>.pgm]\n"
-      "  solver    - Either \"grad\" or \"cg\" for gradient/conjugate-gradient\n"
+      "  solver    - \"grad\" (gradient), \"cg\" (conjugate-gradient),\n"
+      "              \"cpu-jacobi\" (CPU Jacobi iteration), \"cpu-gauss-seidel\"\n"
       "  iter      - Number of iterations for the solver\n"
       "  image     - An RGB image to matte\n"
       "  scribbles - Scribbles for the matte\n"
@@ -318,7 +384,7 @@ void gradSolve( float* alpha, BandedMatrix L, float* b, int iterations, int pad)
    cudaMalloc((void**)&k, 1*sizeof(float));
    cudaMalloc((void**)&tmp, 1*sizeof(float));
    
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    
    // Do the gradient descent iteration.
    while( iterations-- > 0 )
@@ -375,7 +441,7 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    cudaMalloc((void**)&k, 1*sizeof(float));
    cudaMalloc((void**)&rTr, 1*sizeof(float));
    
-   cudaThreadSynchronize();
+   cudaDeviceSynchronize();
    
    // Do the conjugate gradient iterations.
    while( iterations-- > 0 )
@@ -425,6 +491,36 @@ void cgSolve( float* alpha, BandedMatrix L, float* b, int pad, int iterations, i
    vecDeviceFree(r, pad);
 }
 
+void jacobi(
+   float* x,
+   const BandedMatrix a,
+   float const* b,
+   float omega,
+   int pad,
+   int iterations
+)
+{
+   float* xx;
+   float* xxTmp;
+   float* xxOrig;
+   
+   vecDeviceMalloc(&xxOrig, a.rows, pad, pad);
+   cudaDeviceSynchronize();
+   xx = xxOrig;
+   
+   while( iterations-- > 0 )
+   {
+      jacobi_k<17><<<16,1024>>>(xx, x, a, b, omega);
+      
+      // Swap x and xx
+      xxTmp = x;
+      x = xx;
+      xx = xxTmp;
+   }
+   
+   vecDeviceFree(xxOrig, pad);
+}
+
 void computeError( float* alpha, float* gtAlpha, int imW, int imH )
 {
    double ssd = 0.0;
@@ -443,7 +539,5 @@ void computeError( float* alpha, float* gtAlpha, int imW, int imH )
       }
    }
    
-   ssd /= imW*imH;
-   
-   printf("Ground truth SSD: %.3e\n", ssd);
+   printf("Ground truth MSE: %.3e\n", ssd/(imW*imH));
 }
