@@ -32,6 +32,8 @@ void help();
 void dump1D( float* a, int n );
 //! \brief Dump row-major matrix to stdout in %.5e format.
 void dump2D( float* a, int rows, int cols, size_t pitch );
+void dump( BandedMatrix const& bm );
+
 /*!
  * \brief Solve L*alpha = b by gradient descent.
  * 
@@ -159,25 +161,33 @@ int main(int argc, char* argv[])
    L.rows = imW*imH;
    L.cols = L.rows;
    // Setup bands===
-   L.nbands = 17;
-   L.bands = (int*)malloc(17*sizeof(int));
-   L.bands[8+0] = 0;
-   L.bands[8+1] = 1;
-   L.bands[8+2] = 2;
-   L.bands[8+3] = imW;
-   L.bands[8+4] = imW+1;
-   L.bands[8+5] = imW+2;
-   L.bands[8+6] = 2*imW;
-   L.bands[8+7] = 2*imW+1;
-   L.bands[8+8] = 2*imW+2;
-   L.bands[8-1] = -1;
-   L.bands[8-2] = -2;
-   L.bands[8-3] = -imW;
-   L.bands[8-4] = -(imW+1);
-   L.bands[8-5] = -(imW+2);
-   L.bands[8-6] = -(2*imW);
-   L.bands[8-7] = -(2*imW+1);
-   L.bands[8-8] = -(2*imW+2);
+   L.nbands = 25;
+   L.bands = (int*)malloc(L.nbands*sizeof(int));
+   L.bands[12+0] = 0;
+   L.bands[12+1] = 1;
+   L.bands[12+2] = 2;
+   L.bands[12+3] = imW-2;
+   L.bands[12+4] = imW-1;
+   L.bands[12+5] = imW;
+   L.bands[12+6] = imW+1;
+   L.bands[12+7] = imW+2;
+   L.bands[12+8] = 2*imW-2;
+   L.bands[12+9] = 2*imW-1;
+   L.bands[12+10] = 2*imW;
+   L.bands[12+11] = 2*imW+1;
+   L.bands[12+12] = 2*imW+2;
+   L.bands[12-1] = -1;
+   L.bands[12-2] = -2;
+   L.bands[12-3] = -(imW-2);
+   L.bands[12-4] = -(imW-1);
+   L.bands[12-5] = -(imW);
+   L.bands[12-6] = -(imW+1);
+   L.bands[12-7] = -(imW+2);
+   L.bands[12-8] = -(2*imW-2);
+   L.bands[12-9] = -(2*imW-1);
+   L.bands[12-10] = -(2*imW);
+   L.bands[12-11] = -(2*imW+1);
+   L.bands[12-12] = -(2*imW+2);
    // Setup nonzeros===
    L.a = (float*)malloc( L.nbands*L.rows * sizeof(float));
    memset( L.a, 0x00, L.nbands*L.rows * sizeof(float));
@@ -209,9 +219,10 @@ int main(int argc, char* argv[])
    
    beg = clock();
    // WARNING: regularization param < 1e-3 seems to make the Laplacian unstable.
-   hostLevinLaplacian(L, b, 1e-3, im, scribs, imW, imH, imW);
+   hostLevinLaplacian(L, b, 1e-2, im, scribs, imW, imH, imW);
    end = clock();
    fprintf(stderr,"Laplacian generation: %.2es\n", (double)(end-beg)/CLOCKS_PER_SEC);
+   dump(L);
    //------------------------------------------------
    
    // Pad alpha by a multiple of 32 that is larger than (2*imW+2).
@@ -318,6 +329,29 @@ void help()
    );
    
    exit(0);
+}
+
+void dump( BandedMatrix const& bm )
+{
+   int i,j;
+   fprintf(stderr,"%d\n", bm.rows);
+   for( i = 0; i < bm.nbands; ++i )
+      fprintf(stderr,"%d,", bm.bands[i]);
+   printf("\n");
+   /*
+   for( i = 0; i < bm.nbands; ++i )
+   {
+      for( j = 0; j < bm.rows; ++j )
+         printf("%.8e,", bm.a[j+i*bm.apitch]);
+      printf("\n");
+   }
+   */
+   FILE* fp = fopen("A.bin","wb");
+   for( i = 0; i < bm.nbands; ++i )
+   {
+      fwrite(&(bm.a[i*bm.apitch]), sizeof(float), bm.rows, fp);
+   }
+   fclose(fp);
 }
 
 void dump1D( float* a, int n )

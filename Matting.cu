@@ -45,7 +45,7 @@ void hostLevinLaplacian(
    int imW, int imH, size_t imPitch
 )
 {
-   const float gamma = 1e1;
+   const float gamma = 1e0;
    const int winRad = 1;
    const float winSize = (2*winRad+1)*(2*winRad+1);
    
@@ -99,14 +99,14 @@ void hostLevinLaplacian(
          {
             for( u1 = ustart; u1 <= uend; ++u1 )
             {
-               rgba = im[u1 + v1*imPitch];
-               mu.x += rgba.x; mu.y += rgba.y; mu.z += rgba.z;
-               c11 += rgba.x*rgba.x;
-               c12 += rgba.x*rgba.y;
-               c13 += rgba.x*rgba.z;
-               c22 += rgba.y*rgba.y;
-               c23 += rgba.y*rgba.z;
-               c33 += rgba.z*rgba.z;
+               float4 const* tmp = &(im[u1 + v1*imPitch]);
+               mu.x += tmp->x; mu.y += tmp->y; mu.z += tmp->z;
+               c11 += tmp->x*tmp->x;
+               c12 += tmp->x*tmp->y;
+               c13 += tmp->x*tmp->z;
+               c22 += tmp->y*tmp->y;
+               c23 += tmp->y*tmp->z;
+               c33 += tmp->z*tmp->z;
                
                ++numNeighbors;
             }
@@ -153,8 +153,8 @@ void hostLevinLaplacian(
                white.z = (d13 * rgba.x + d23 * rgba.y + d33 * rgba.z)/cdet;
                
                // Self-similarity L(i,i)
-               negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
-               L.a[ i + iband*L.apitch] = negSim;
+               //negSim = -(1.0f + white.x*rgba.x + white.y*rgba.y + white.z*rgba.z)/winSize;
+               //L.a[ i + iband*L.apitch] = negSim;
                
                for( v2 = vstart; v2 <= vend; ++v2 )
                {
@@ -162,11 +162,11 @@ void hostLevinLaplacian(
                   {
                      j = u2 + v2*imW;
                      // NOTE: need to find a better way
-                     if( j <= i )
-                        continue;
+                     //if( j <= i )
+                     //   continue;
                      
-                     // jbandoff \in [0,8] is the offset from the center band (a.k.a main diagonal, a.k.a iband).
-                     jbandoff = (u2-u1) + (v2-v1)*(2*winRad+1);
+                     // jbandoff \in [0,12] is the offset from the center band (a.k.a main diagonal, a.k.a iband).
+                     jbandoff = (u2-u1) + (v2-v1)*(4*winRad+1);
                      
                      rgba = im[u2 + v2*imPitch];
                      rgba.x -= mu.x;
@@ -178,8 +178,9 @@ void hostLevinLaplacian(
                      
                      // L(i,j) += negSim
                      L.a[ i + (iband+jbandoff)*L.apitch ] += negSim;
+                     
                      // L(j,i) += negSim
-                     L.a[ j + (iband-jbandoff)*L.apitch ] += negSim;
+                     //L.a[ j + (iband-jbandoff)*L.apitch ] += negSim;
                   }
                }
             }
